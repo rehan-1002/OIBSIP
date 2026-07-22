@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FUOCO — Artisan Pizza & Custom Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.33/dist/lenis.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            charcoal: '#0D0D0D',
+            'charcoal-light': '#1A1A1A',
+            'charcoal-lighter': '#2A2A2A',
+            accent: '#FF5E14',
+            gold: '#FFB800',
+          },
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #0D0D0D;
+      --fg: #F5F5F5;
+      --muted: #777777;
+      --accent: #FF5E14;
+      --gold: #FFB800;
+      --card: #1A1A1A;
+      --border: #2A2A2A;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      overflow-x: hidden;
+    }
+
+    .noise-overlay {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 9998; opacity: 0.035;
+    }
+
+    #scroll-progress {
+      position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      z-index: 10001; transform-origin: left; transform: scaleX(0);
+      will-change: transform;
+    }
+
+    .orb { position: absolute; border-radius: 50%; filter: blur(100px); pointer-events: none; will-change: transform; }
+    .orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,94,20,0.2), transparent 70%); top: -100px; right: -150px; animation: orbFloat1 25s ease-in-out infinite; }
+    .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(255,184,0,0.12), transparent 70%); bottom: 20%; left: -100px; animation: orbFloat2 30s ease-in-out infinite; }
+    .orb-3 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(255,94,20,0.1), transparent 70%); top: 60%; right: 10%; animation: orbFloat3 20s ease-in-out infinite; }
+    @keyframes orbFloat1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-80px,60px) scale(1.1)} 66%{transform:translate(40px,-40px) scale(0.9)} }
+    @keyframes orbFloat2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(100px,-50px) scale(1.15)} }
+    @keyframes orbFloat3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,40px)} }
+
+    .hero-bg { position: absolute; inset: 0; background: url('https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&h=1080&fit=crop') center/cover no-repeat; will-change: transform; }
+    .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,13,13,0.7) 0%, rgba(13,13,13,0.85) 40%, rgba(13,13,13,0.95) 70%, rgba(13,13,13,1) 100%); }
+
+    .hero-pizza-wrap { perspective: 1000px; }
+    .hero-pizza {
+      width: 380px; height: 380px; border-radius: 50%; overflow: hidden;
+      transform-style: preserve-3d;
+      box-shadow: 0 0 80px rgba(255,94,20,0.25), 0 0 160px rgba(255,94,20,0.08), 0 20px 60px rgba(0,0,0,0.6);
+      border: 3px solid rgba(255,94,20,0.15); will-change: transform;
+    }
+    .hero-pizza img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-pizza-glow { position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(255,94,20,0.15), transparent 60%); animation: pulseGlow 4s ease-in-out infinite; z-index: -1; }
+    @keyframes pulseGlow { 0%,100%{opacity:0.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
+
+    .char-reveal { display: inline-block; opacity: 0; transform: translateY(80px) rotateX(-90deg); transform-origin: bottom center; }
+
+    .hero-particle { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0; animation: particleFloat var(--dur) var(--delay) ease-in-out infinite; }
+    @keyframes particleFloat { 0%{opacity:0;transform:translateY(0) scale(0)} 15%{opacity:var(--op);transform:translateY(-40px) scale(1)} 85%{opacity:calc(var(--op)*0.3);transform:translateY(-350px) scale(0.4)} 100%{opacity:0;transform:translateY(-420px) scale(0)} }
+
+    .magnetic-btn {
+      position: relative; display: inline-flex; align-items: center; gap: 10px;
+      padding: 18px 42px; background: var(--accent); color: #fff;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+      letter-spacing: 0.05em; border: none; border-radius: 60px;
+      cursor: pointer; overflow: hidden; will-change: transform;
+      transition: box-shadow 0.3s ease;
+    }
+    .magnetic-btn:hover { box-shadow: 0 0 40px rgba(255,94,20,0.5), 0 0 80px rgba(255,94,20,0.2); }
+    .magnetic-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.3s; }
+    .magnetic-btn:hover::before { opacity: 1; }
+    .magnetic-btn-pulse { position: absolute; inset: -4px; border-radius: 60px; border: 2px solid var(--accent); animation: btnPulse 2s ease-out infinite; }
+    @keyframes btnPulse { 0%{opacity:0.6;transform:scale(1)} 100%{opacity:0;transform:scale(1.15)} }
+
+    .horizontal-section { overflow: visible; }
+    @media(min-width:768px) { .horizontal-section { overflow: hidden; } }
+    .horizontal-track { display: flex; gap: 40px; will-change: transform; }
+    @media(max-width:767px) { .horizontal-track { flex-wrap: wrap; gap: 20px; justify-content: center; } }
+    .ingredient-card { flex-shrink: 0; width: 380px; background: var(--card); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; transform-style: preserve-3d; will-change: transform; cursor: default; }
+    @media(max-width:767px) { .ingredient-card { width: 100%; max-width: 380px; } }
+    .ingredient-card img { width: 100%; height: 240px; object-fit: cover; transition: transform 0.6s cubic-bezier(0.23,1,0.32,1); }
+    .ingredient-card:hover img { transform: scale(1.08); }
+
+    .filter-btn { padding: 10px 24px; border-radius: 40px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.875rem; cursor: pointer; transition: all 0.35s cubic-bezier(0.23,1,0.32,1); white-space: nowrap; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--fg); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 20px rgba(255,94,20,0.3); }
+
+    .pizza-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), box-shadow 0.4s ease, border-color 0.4s ease; will-change: transform, opacity; }
+    .pizza-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); border-color: rgba(255,94,20,0.3); }
+    .pizza-card .img-wrap { position: relative; overflow: hidden; height: 220px; }
+    .pizza-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s cubic-bezier(0.23,1,0.32,1); }
+    .pizza-card:hover .img-wrap img { transform: scale(1.1); }
+    .pizza-badge { position: absolute; top: 12px; left: 12px; padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; z-index: 2; }
+    .badge-spicy { background: rgba(255,60,60,0.9); color: #fff; }
+    .badge-chef { background: rgba(255,184,0,0.9); color: #0D0D0D; }
+    .badge-best { background: rgba(255,94,20,0.9); color: #fff; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 9000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .modal-glass {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+      width: 92%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+      background: rgba(20,20,20,0.96); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 28px;
+      z-index: 9001; opacity: 0; pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+    }
+    .modal-glass.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+    .modal-glass::-webkit-scrollbar { width: 6px; }
+    .modal-glass::-webkit-scrollbar-track { background: transparent; }
+    .modal-glass::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .size-btn { flex: 1; padding: 14px 10px; border: 1px solid var(--border); border-radius: 14px; background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+    .size-btn:hover { border-color: var(--accent); color: var(--fg); }
+    .size-btn.active { background: rgba(255,94,20,0.15); border-color: var(--accent); color: var(--accent); }
+
+    .option-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; background: var(--card); }
+    .option-card:hover { border-color: rgba(255,94,20,0.4); }
+    .option-card.selected { background: rgba(255,94,20,0.1); border-color: var(--accent); }
+
+    .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 8000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+    .cart-overlay.open { opacity: 1; pointer-events: all; }
+    .cart-drawer { position: fixed; top: 0; right: 0; width: 420px; max-width: 92vw; height: 100vh; background: rgba(13,13,13,0.97); backdrop-filter: blur(20px); border-left: 1px solid rgba(255,255,255,0.06); z-index: 8001; transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.23,1,0.32,1); display: flex; flex-direction: column; }
+    .cart-drawer.open { transform: translateX(0); }
+
+    .floating-cart { position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; z-index: 7000; cursor: pointer; box-shadow: 0 8px 32px rgba(255,94,20,0.4); transform: scale(0); transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s; }
+    .floating-cart.visible { transform: scale(1); }
+    .floating-cart:hover { box-shadow: 0 8px 48px rgba(255,94,20,0.6); }
+    .cart-badge { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #0D0D0D; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transform: scale(0); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    .cart-badge.visible { transform: scale(1); }
+
+    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 11000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { padding: 14px 24px; background: rgba(26,26,26,0.95); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 14px; font-size: 0.875rem; color: var(--fg); transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.3s; box-shadow: 0 8px 32px rgba(0,0,0,0.3); pointer-events: auto; }
+    .toast.show { transform: translateX(0); }
+
+    .nav-solid { background: rgba(13,13,13,0.92) !important; backdrop-filter: blur(16px) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+
+    #preloader { position: fixed; inset: 0; z-index: 100000; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+    .preloader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius: 4px; }
+
+    .step-pill { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; color: var(--muted); }
+    .step-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .step-pill.completed { background: var(--gold); border-color: var(--gold); color: #0D0D0D; }
+
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .status-received { background: rgba(255, 184, 0, 0.15); color: #FFB800; border: 1px solid rgba(255, 184, 0, 0.3); }
+    .status-kitchen { background: rgba(255, 94, 20, 0.15); color: #FF5E14; border: 1px solid rgba(255, 94, 20, 0.3); }
+    .status-delivery { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-delivered { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+    .stock-badge-low { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .stock-badge-ok { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+    @media(max-width:768px) { .hero-pizza { width: 240px; height: 240px; } }
+  </style>
+</head>
+<body>
+  <svg style="position:fixed;width:0;height:0" aria-hidden="true">
+    <filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  </svg>
+  <div class="noise-overlay" style="filter:url(#noiseFilter)"></div>
+  <div id="scroll-progress"></div>
+
+  <div id="preloader">
+    <div class="text-center">
+      <h2 class="font-display font-extrabold text-5xl tracking-widest" style="color:var(--accent)">FUOCO</h2>
+      <p class="mt-2 text-sm tracking-[0.3em] uppercase" style="color:var(--muted)">Artisan Pizza & Custom Builder</p>
+      <div class="mt-6 w-56 h-1 overflow-hidden rounded-full" style="background:var(--border)"><div class="preloader-bar" id="preloaderBar"></div></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- NAVBAR -->
+  <nav id="mainNav" class="fixed top-0 left-0 w-full z-[9000] transition-all duration-500" style="background:transparent;border-bottom:1px solid transparent">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <a href="#" class="font-display font-extrabold text-2xl tracking-widest flex items-center gap-2" style="color:var(--accent)" aria-label="FUOCO Home">
+        <span>FUOCO</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full border border-orange-500/30 text-orange-400 font-sans tracking-normal font-semibold">MERN</span>
+      </a>
+      
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Menu</a>
+        <button id="openBuilderBtn" class="text-sm font-semibold tracking-wide text-amber-400 hover:text-orange-400 transition-colors flex items-center gap-1.5">
+          <i data-lucide="chef-hat" class="w-4 h-4"></i> Custom Builder (4-Step)
+        </button>
+        <a href="#why-us" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Our Craft</a>
+        <button id="myOrdersBtn" class="hidden text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">My Orders</button>
+        <button id="adminPanelNavBtn" class="hidden text-sm font-semibold tracking-wide text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
+        </button>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Auth Container -->
+        <div id="authNavButtons" class="flex items-center gap-3">
+          <button id="loginModalBtn" class="text-xs font-semibold px-4 py-2 rounded-full border border-charcoal-lighter hover:border-accent text-white transition-all">Log In</button>
+          <button id="registerModalBtn" class="text-xs font-semibold px-4 py-2 rounded-full bg-accent text-white hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/30">Register</button>
+        </div>
+        
+        <div id="userInfoNav" class="hidden flex items-center gap-3">
+          <span id="navUserName" class="text-xs font-medium text-amber-400"></span>
+          <button id="logoutBtn" class="text-xs text-stone-400 hover:text-red-400 transition-colors">Logout</button>
+        </div>
+
+        <button id="navCartBtn" class="relative p-2 hover:text-accent transition-colors duration-300" style="color:var(--muted)" aria-label="Open cart">
+          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+          <span id="navCartBadge" class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--gold);color:var(--bg);display:none">0</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+  <div class="orb orb-3" aria-hidden="true"></div>
+
+  <!-- HERO -->
+  <section id="hero" class="relative min-h-screen flex items-center overflow-hidden">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-overlay"></div>
+    <div id="heroParticles" class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+    <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-24 pb-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+      <div class="flex-1 text-center lg:text-left">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-6" style="color:var(--accent)" id="heroTag">Wood-Fired Perfection & Live Inventory</p>
+        <h1 class="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[0.95] mb-8" id="heroHeadline">CRAFT YOUR OWN PIZZA, DELIVERED HOT</h1>
+        <p class="text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 leading-relaxed" style="color:var(--muted)" id="heroSub">
+          Choose your base, sauce, cheese, and fresh vegetables in our 4-Step Interactive Pizza Builder with instant Razorpay checkout & automated inventory tracking.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+          <button class="magnetic-btn" id="heroCustomBuilderCta">
+            <span class="magnetic-btn-pulse" aria-hidden="true"></span>
+            <i data-lucide="sparkles" class="w-5 h-5 relative z-10"></i>
+            <span class="relative z-10">Build Custom Pizza</span>
+          </button>
+          <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300 flex items-center gap-2" style="color:var(--muted)">
+            <i data-lucide="utensils" class="w-4 h-4"></i> View Classic Menu
+          </a>
+        </div>
+      </div>
+      <div class="flex-shrink-0 hero-pizza-wrap relative" id="heroPizzaWrap">
+        <div class="hero-pizza-glow" aria-hidden="true"></div>
+        <div class="hero-pizza" id="heroPizza">
+          <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&h=800&fit=crop" alt="Artisan Neapolitan pizza" loading="eager">
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10" id="scrollIndicator">
+      <span class="text-xs tracking-[0.2em] uppercase" style="color:var(--muted)">Scroll</span>
+      <div class="w-5 h-8 border border-charcoal-lighter rounded-full flex justify-center pt-1.5">
+        <div class="w-1 h-2 rounded-full" style="background:var(--accent);animation:scrollDot 1.5s ease-in-out infinite"></div>
+      </div>
+    </div>
+    <style>@keyframes scrollDot { 0%,100%{opacity:0;transform:translateY(0)} 50%{opacity:1;transform:translateY(8px)} }</style>
+  </section>
+
+  <!-- WHY US / CRAFT -->
+  <section id="why-us" class="horizontal-section relative py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6 mb-16">
+      <div class="reveal-up">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">Our Ingredients</p>
+        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-tight">Only The Finest<br>Make The Cut</h2>
+      </div>
+    </div>
+    <div class="horizontal-track px-6 lg:px-[max(1.5rem,calc((100vw-1280px)/2+1.5rem))]" id="ingredientTrack"></div>
+  </section>
+
+  <!-- MENU SECTION -->
+  <section id="menu" class="relative py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="reveal-up text-center mb-12">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">Preset & Custom Creations</p>
+        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl">Choose Your Fire</h2>
+      </div>
+      <div class="reveal-up flex flex-wrap items-center justify-center gap-3 mb-14" id="filterBar"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7" id="pizzaGrid"></div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="footer" class="relative border-t border-charcoal-lighter">
+    <div class="max-w-7xl mx-auto px-6 py-16">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-charcoal-lighter pb-12">
+        <div>
+          <h3 class="font-display font-extrabold text-3xl tracking-widest" style="color:var(--accent)">FUOCO</h3>
+          <p class="text-xs text-stone-400 mt-1">Full-Stack MERN Artisan Pizza & Live Inventory Management</p>
+        </div>
+        <div class="flex gap-4">
+          <button id="footerBuilderBtn" class="text-xs font-bold px-5 py-3 rounded-full bg-accent text-white hover:bg-orange-600 transition-all shadow-lg">Start Custom Builder</button>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-stone-500">
+        <p>&copy; 2026 FUOCO Artisan Pizza. Powered by Node.js, Express, MongoDB, Nodemailer, Razorpay & Socket.io.</p>
+        <button id="backToTop" class="p-3 rounded-full border border-charcoal-lighter text-stone-400 hover:text-accent hover:border-accent transition-colors"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- FLOATING CART -->
+  <div class="floating-cart" id="floatingCart" aria-label="Open cart">
+    <i data-lucide="shopping-bag" class="w-6 h-6 text-white"></i>
+    <span class="cart-badge" id="floatingCartBadge">0</span>
+  </div>
+
+  <!-- CART DRAWER -->
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <aside class="cart-drawer" id="cartDrawer" role="dialog" aria-label="Shopping cart">
+    <div class="flex items-center justify-between p-6 border-b border-charcoal-lighter">
+      <h3 class="font-display font-bold text-xl">Your Order</h3>
+      <button id="closeCartBtn" class="p-2 text-stone-400 hover:text-accent transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6" id="cartItems"></div>
+    <div class="p-6 border-t border-charcoal-lighter" id="cartFooter"></div>
+  </aside>
+
+  <!-- MODAL BACKDROP -->
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+
+  <!-- 4-STEP PIZZA BUILDER MODAL -->
+  <div class="modal-glass" id="builderModal" role="dialog">
+    <div class="p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-charcoal-lighter pb-5 mb-6">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-widest text-accent">Step-by-Step Creation</span>
+          <h3 class="font-display font-extrabold text-2xl">4-Step Custom Pizza Builder</h3>
+        </div>
+        <button class="close-modal-btn text-stone-400 hover:text-accent"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <!-- Step Indicator Bar -->
+      <div class="flex items-center justify-between mb-8 px-2">
+        <div class="flex items-center gap-2">
+          <div class="step-pill active" id="stepPill1">1</div>
+          <span class="text-xs font-medium hidden sm:inline">Base</span>
+        </div>
+        <div class="h-0.5 w-8 bg-charcoal-lighter"></div>
+        <div class="flex items-center gap-2">
+          <div class="step-pill" id="stepPill2">2</div>
+          <span class="text-xs font-medium hidden sm:inline">Sauce</span>
+        </div>
+        <div class="h-0.5 w-8 bg-charcoal-lighter"></div>
+        <div class="flex items-center gap-2">
+          <div class="step-pill" id="stepPill3">3</div>
+          <span class="text-xs font-medium hidden sm:inline">Cheese</span>
+        </div>
+        <div class="h-0.5 w-8 bg-charcoal-lighter"></div>
+        <div class="flex items-center gap-2">
+          <div class="step-pill" id="stepPill4">4</div>
+          <span class="text-xs font-medium hidden sm:inline">Veggies</span>
+        </div>
+      </div>
+
+      <!-- Step Contents -->
+      <div id="builderStepContainer">
+        <!-- Step 1: Base -->
+        <div id="builderStep1" class="builder-step">
+          <h4 class="font-display font-bold text-lg mb-2">Step 1: Choose Your Pizza Base (5 Options)</h4>
+          <p class="text-xs text-stone-400 mb-4">Select your handcrafted crust base</p>
+          <div class="space-y-3" id="basesList"></div>
+        </div>
+
+        <!-- Step 2: Sauce -->
+        <div id="builderStep2" class="builder-step hidden">
+          <h4 class="font-display font-bold text-lg mb-2">Step 2: Choose Your Artisanal Sauce (5 Options)</h4>
+          <p class="text-xs text-stone-400 mb-4">Select your signature house sauce base</p>
+          <div class="space-y-3" id="saucesList"></div>
+        </div>
+
+        <!-- Step 3: Cheese -->
+        <div id="builderStep3" class="builder-step hidden">
+          <h4 class="font-display font-bold text-lg mb-2">Step 3: Choose Cheese Type</h4>
+          <p class="text-xs text-stone-400 mb-4">Select your gourmet melting cheese</p>
+          <div class="space-y-3" id="cheesesList"></div>
+        </div>
+
+        <!-- Step 4: Vegetables -->
+        <div id="builderStep4" class="builder-step hidden">
+          <h4 class="font-display font-bold text-lg mb-2">Step 4: Choose Vegetables (Multi-Select)</h4>
+          <p class="text-xs text-stone-400 mb-4">Pick fresh farm veggies for your custom pie</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="veggiesList"></div>
+        </div>
+      </div>
+
+      <!-- Builder Footer Controls -->
+      <div class="flex items-center justify-between mt-8 pt-6 border-t border-charcoal-lighter">
+        <button id="builderPrevBtn" class="px-5 py-2.5 rounded-xl border border-charcoal-lighter text-stone-400 hover:text-white text-xs font-semibold disabled:opacity-30 disabled:pointer-events-none">Back</button>
+        <div class="text-right">
+          <span class="text-xs text-stone-400 block">Total Price</span>
+          <span id="builderTotalPrice" class="font-display font-extrabold text-xl text-accent">$14.99</span>
+        </div>
+        <button id="builderNextBtn" class="px-6 py-2.5 rounded-xl bg-accent text-white hover:bg-orange-600 text-xs font-bold transition-all shadow-lg shadow-orange-900/30">Next Step</button>
+        <button id="builderAddToCartBtn" class="hidden px-6 py-2.5 rounded-xl bg-amber-500 text-stone-950 hover:bg-amber-400 text-xs font-bold transition-all shadow-lg">Add to Cart 🛒</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH MODALS (Login / Register / Forgot Password) -->
+  <div class="modal-glass" id="authModal" role="dialog">
+    <div class="p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-charcoal-lighter pb-4 mb-6">
+        <h3 class="font-display font-bold text-xl" id="authModalTitle">User Account</h3>
+        <button class="close-modal-btn text-stone-400 hover:text-accent"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Email Address</label>
+          <input type="email" id="loginEmail" required class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Password</label>
+          <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-sm hover:bg-orange-600 transition-all shadow-lg">Log In</button>
+        <div class="flex justify-between text-xs text-stone-400 pt-2">
+          <a href="#" id="toggleForgotBtn" class="hover:text-amber-400">Forgot Password?</a>
+          <a href="#" id="toggleRegisterBtn" class="hover:text-accent">Don't have an account? Register</a>
+        </div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" class="space-y-4 hidden">
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Full Name</label>
+          <input type="text" id="regName" required class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Email Address</label>
+          <input type="email" id="regEmail" required class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Password</label>
+          <input type="password" id="regPassword" required minlength="6" class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Account Type</label>
+          <select id="regRole" class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+            <option value="user">Customer Account</option>
+            <option value="admin">Store Admin</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-accent text-white font-bold text-sm hover:bg-orange-600 transition-all shadow-lg">Create Account</button>
+        <p class="text-center text-xs text-stone-400 pt-2">
+          Already registered? <a href="#" id="toggleLoginBtn" class="text-accent">Log In</a>
+        </p>
+      </form>
+
+      <!-- FORGOT PASSWORD FORM -->
+      <form id="forgotForm" class="space-y-4 hidden">
+        <p class="text-xs text-stone-400">Enter your registered email to receive a password reset link.</p>
+        <div>
+          <label class="text-xs font-medium text-stone-400 block mb-1.5">Email Address</label>
+          <input type="email" id="forgotEmail" required class="w-full px-4 py-3 rounded-xl bg-charcoal border border-charcoal-lighter text-sm text-white focus:outline-none focus:border-accent">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-amber-500 text-stone-950 font-bold text-sm hover:bg-amber-400 transition-all shadow-lg">Send Reset Link</button>
+        <p class="text-center text-xs text-stone-400 pt-2">
+          <a href="#" id="backToLoginFromForgot" class="text-accent">Back to Login</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- USER ORDERS & LIVE TRACKER MODAL -->
+  <div class="modal-glass" id="ordersModal" role="dialog">
+    <div class="p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-charcoal-lighter pb-4 mb-6">
+        <div>
+          <span class="text-xs text-accent font-semibold uppercase tracking-widest">Real-time Order Updates</span>
+          <h3 class="font-display font-extrabold text-2xl">My Orders</h3>
+        </div>
+        <button class="close-modal-btn text-stone-400 hover:text-accent"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-1" id="userOrdersList"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD PANEL MODAL -->
+  <div class="modal-glass" id="adminModal" role="dialog" style="max-width: 900px;">
+    <div class="p-6 sm:p-8">
+      <div class="flex items-center justify-between border-b border-charcoal-lighter pb-4 mb-6">
+        <div>
+          <span class="text-xs text-red-400 font-semibold uppercase tracking-widest">Store Management</span>
+          <h3 class="font-display font-extrabold text-2xl">Admin Dashboard & Inventory</h3>
+        </div>
+        <button class="close-modal-btn text-stone-400 hover:text-accent"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <!-- Admin Tabs -->
+      <div class="flex gap-4 border-b border-charcoal-lighter pb-3 mb-6">
+        <button id="adminTabInventory" class="text-sm font-bold pb-2 border-b-2 border-accent text-accent">Inventory Stock (<span id="lowStockCountBadge">0</span> low)</button>
+        <button id="adminTabOrders" class="text-sm font-bold pb-2 border-b-2 border-transparent text-stone-400 hover:text-white">Customer Orders Management</button>
+      </div>
+
+      <!-- INVENTORY SECTION -->
+      <div id="adminInventorySec">
+        <div class="flex justify-between items-center mb-4">
+          <p class="text-xs text-stone-400">Items with stock &lt; 20 trigger automated low-stock email alerts to admin via node-cron.</p>
+          <button id="seedInventoryBtn" class="text-xs bg-stone-800 hover:bg-stone-700 text-stone-300 px-3 py-1.5 rounded-lg border border-stone-700">Reset/Seed Default Stock</button>
+        </div>
+        <div class="overflow-x-auto max-h-[50vh]">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-charcoal text-stone-400 uppercase tracking-wider sticky top-0">
+              <tr>
+                <th class="p-3">Category</th>
+                <th class="p-3">Ingredient</th>
+                <th class="p-3">Price</th>
+                <th class="p-3">Current Stock</th>
+                <th class="p-3">Threshold</th>
+                <th class="p-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminInventoryTable" class="divide-y divide-charcoal-lighter"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ORDERS SECTION -->
+      <div id="adminOrdersSec" class="hidden">
+        <div class="overflow-x-auto max-h-[50vh]">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-charcoal text-stone-400 uppercase tracking-wider sticky top-0">
+              <tr>
+                <th class="p-3">Order ID</th>
+                <th class="p-3">Customer</th>
+                <th class="p-3">Items</th>
+                <th class="p-3">Total</th>
+                <th class="p-3">Payment</th>
+                <th class="p-3">Order Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminOrdersTable" class="divide-y divide-charcoal-lighter"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

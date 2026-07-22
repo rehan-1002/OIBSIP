@@ -1,0 +1,21 @@
+{
+  "name": "fuoco-artisan-pizza-app",
+  "version": "1.0.0",
+  "description": "FUOCO Artisan Pizza Ordering & Inventory System (MERN Stack)",
+  "main": "server/server.js",
+  "scripts": {
+    "postinstall": "cd server && npm install",
+    "start": "node server/server.js",
+    "dev": "cd server && npm run dev"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "razorpay",
+    "nodemailer",
+    "socket.io",
+    "gsap"
+  ],
+  "author": "",
+  "license": "ISC"
+}

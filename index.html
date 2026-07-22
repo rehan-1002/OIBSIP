@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FUOCO — Artisan Pizza Delivery</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.33/dist/lenis.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            charcoal: '#0D0D0D',
+            'charcoal-light': '#1A1A1A',
+            'charcoal-lighter': '#2A2A2A',
+            accent: '#FF5E14',
+            gold: '#FFB800',
+          },
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #0D0D0D;
+      --fg: #F5F5F5;
+      --muted: #777777;
+      --accent: #FF5E14;
+      --gold: #FFB800;
+      --card: #1A1A1A;
+      --border: #2A2A2A;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      overflow-x: hidden;
+    }
+
+    .noise-overlay {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 9998; opacity: 0.035;
+    }
+
+    #scroll-progress {
+      position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      z-index: 10001; transform-origin: left; transform: scaleX(0);
+      will-change: transform;
+    }
+
+    .orb { position: absolute; border-radius: 50%; filter: blur(100px); pointer-events: none; will-change: transform; }
+    .orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,94,20,0.2), transparent 70%); top: -100px; right: -150px; animation: orbFloat1 25s ease-in-out infinite; }
+    .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(255,184,0,0.12), transparent 70%); bottom: 20%; left: -100px; animation: orbFloat2 30s ease-in-out infinite; }
+    .orb-3 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(255,94,20,0.1), transparent 70%); top: 60%; right: 10%; animation: orbFloat3 20s ease-in-out infinite; }
+    @keyframes orbFloat1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-80px,60px) scale(1.1)} 66%{transform:translate(40px,-40px) scale(0.9)} }
+    @keyframes orbFloat2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(100px,-50px) scale(1.15)} }
+    @keyframes orbFloat3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,40px)} }
+
+    .hero-bg { position: absolute; inset: 0; background: url('https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&h=1080&fit=crop') center/cover no-repeat; will-change: transform; }
+    .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,13,13,0.7) 0%, rgba(13,13,13,0.85) 40%, rgba(13,13,13,0.95) 70%, rgba(13,13,13,1) 100%); }
+
+    .hero-pizza-wrap { perspective: 1000px; }
+    .hero-pizza {
+      width: 380px; height: 380px; border-radius: 50%; overflow: hidden;
+      transform-style: preserve-3d;
+      box-shadow: 0 0 80px rgba(255,94,20,0.25), 0 0 160px rgba(255,94,20,0.08), 0 20px 60px rgba(0,0,0,0.6);
+      border: 3px solid rgba(255,94,20,0.15); will-change: transform;
+    }
+    .hero-pizza img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-pizza-glow { position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(255,94,20,0.15), transparent 60%); animation: pulseGlow 4s ease-in-out infinite; z-index: -1; }
+    @keyframes pulseGlow { 0%,100%{opacity:0.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
+
+    .char-reveal { display: inline-block; opacity: 0; transform: translateY(80px) rotateX(-90deg); transform-origin: bottom center; }
+
+    .hero-particle { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0; animation: particleFloat var(--dur) var(--delay) ease-in-out infinite; }
+    @keyframes particleFloat { 0%{opacity:0;transform:translateY(0) scale(0)} 15%{opacity:var(--op);transform:translateY(-40px) scale(1)} 85%{opacity:calc(var(--op)*0.3);transform:translateY(-350px) scale(0.4)} 100%{opacity:0;transform:translateY(-420px) scale(0)} }
+
+    .magnetic-btn {
+      position: relative; display: inline-flex; align-items: center; gap: 10px;
+      padding: 18px 42px; background: var(--accent); color: #fff;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+      letter-spacing: 0.05em; border: none; border-radius: 60px;
+      cursor: pointer; overflow: hidden; will-change: transform;
+      transition: box-shadow 0.3s ease;
+    }
+    .magnetic-btn:hover { box-shadow: 0 0 40px rgba(255,94,20,0.5), 0 0 80px rgba(255,94,20,0.2); }
+    .magnetic-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.3s; }
+    .magnetic-btn:hover::before { opacity: 1; }
+    .magnetic-btn-pulse { position: absolute; inset: -4px; border-radius: 60px; border: 2px solid var(--accent); animation: btnPulse 2s ease-out infinite; }
+    @keyframes btnPulse { 0%{opacity:0.6;transform:scale(1)} 100%{opacity:0;transform:scale(1.15)} }
+
+    .horizontal-section { overflow: visible; }
+    @media(min-width:768px) { .horizontal-section { overflow: hidden; } }
+    .horizontal-track { display: flex; gap: 40px; will-change: transform; }
+    @media(max-width:767px) { .horizontal-track { flex-wrap: wrap; gap: 20px; justify-content: center; } }
+    .ingredient-card { flex-shrink: 0; width: 380px; background: var(--card); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; transform-style: preserve-3d; will-change: transform; cursor: default; }
+    @media(max-width:767px) { .ingredient-card { width: 100%; max-width: 380px; } }
+    .ingredient-card img { width: 100%; height: 240px; object-fit: cover; transition: transform 0.6s cubic-bezier(0.23,1,0.32,1); }
+    .ingredient-card:hover img { transform: scale(1.08); }
+    .ingredient-card .card-shine { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent 50%); pointer-events: none; border-radius: 24px; }
+
+    .filter-btn { padding: 10px 24px; border-radius: 40px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.875rem; cursor: pointer; transition: all 0.35s cubic-bezier(0.23,1,0.32,1); white-space: nowrap; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--fg); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 20px rgba(255,94,20,0.3); }
+
+    .pizza-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), box-shadow 0.4s ease, border-color 0.4s ease; will-change: transform, opacity; }
+    .pizza-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); border-color: rgba(255,94,20,0.3); }
+    .pizza-card .img-wrap { position: relative; overflow: hidden; height: 220px; }
+    .pizza-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s cubic-bezier(0.23,1,0.32,1); }
+    .pizza-card:hover .img-wrap img { transform: scale(1.1); }
+    .pizza-badge { position: absolute; top: 12px; left: 12px; padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; z-index: 2; }
+    .badge-spicy { background: rgba(255,60,60,0.9); color: #fff; }
+    .badge-chef { background: rgba(255,184,0,0.9); color: #0D0D0D; }
+    .badge-best { background: rgba(255,94,20,0.9); color: #fff; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 9000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .modal-glass {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+      width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto;
+      background: rgba(26,26,26,0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 28px;
+      z-index: 9001; opacity: 0; pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+    }
+    .modal-glass.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+    .modal-glass::-webkit-scrollbar { width: 6px; }
+    .modal-glass::-webkit-scrollbar-track { background: transparent; }
+    .modal-glass::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .size-btn { flex: 1; padding: 14px 10px; border: 1px solid var(--border); border-radius: 14px; background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+    .size-btn:hover { border-color: var(--accent); color: var(--fg); }
+    .size-btn.active { background: rgba(255,94,20,0.15); border-color: var(--accent); color: var(--accent); }
+
+    .topping-check { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; user-select: none; }
+    .topping-check:hover { border-color: rgba(255,94,20,0.4); }
+    .topping-check.selected { background: rgba(255,94,20,0.08); border-color: var(--accent); }
+    .topping-check .check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; }
+    .topping-check.selected .check-box { background: var(--accent); border-color: var(--accent); }
+
+    .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 8000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+    .cart-overlay.open { opacity: 1; pointer-events: all; }
+    .cart-drawer { position: fixed; top: 0; right: 0; width: 420px; max-width: 92vw; height: 100vh; background: rgba(13,13,13,0.97); backdrop-filter: blur(20px); border-left: 1px solid rgba(255,255,255,0.06); z-index: 8001; transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.23,1,0.32,1); display: flex; flex-direction: column; }
+    .cart-drawer.open { transform: translateX(0); }
+
+    .floating-cart { position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; z-index: 7000; cursor: pointer; box-shadow: 0 8px 32px rgba(255,94,20,0.4); transform: scale(0); transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s; }
+    .floating-cart.visible { transform: scale(1); }
+    .floating-cart:hover { box-shadow: 0 8px 48px rgba(255,94,20,0.6); }
+    .cart-badge { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #0D0D0D; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transform: scale(0); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    .cart-badge.visible { transform: scale(1); }
+    .cart-badge.bump { animation: badgeBump 0.4s ease; }
+    @keyframes badgeBump { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+
+    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 11000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { padding: 14px 24px; background: rgba(26,26,26,0.95); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 14px; font-size: 0.875rem; color: var(--fg); transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.3s; box-shadow: 0 8px 32px rgba(0,0,0,0.3); pointer-events: auto; }
+    .toast.show { transform: translateX(0); }
+    .toast.hide { opacity: 0; transform: translateX(120%); }
+
+    .nav-solid { background: rgba(13,13,13,0.92) !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+
+    #preloader { position: fixed; inset: 0; z-index: 100000; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+    .preloader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius: 4px; }
+
+    .star { color: var(--gold); }
+
+    .social-link { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); transition: all 0.4s cubic-bezier(0.23,1,0.32,1); }
+    .social-link:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 24px rgba(255,94,20,0.2); transform: translateY(-3px); }
+
+    .reveal-up { opacity: 0; transform: translateY(60px); }
+
+    .back-to-top { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; }
+    .back-to-top:hover { border-color: var(--accent); color: var(--accent); }
+
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:0.01ms!important; animation-iteration-count:1!important; transition-duration:0.01ms!important; } }
+    @media(max-width:768px) { .hero-pizza { width: 240px; height: 240px; } }
+  </style>
+</head>
+<body>
+  <svg style="position:fixed;width:0;height:0" aria-hidden="true">
+    <filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  </svg>
+  <div class="noise-overlay" style="filter:url(#noiseFilter)"></div>
+  <div id="scroll-progress"></div>
+
+  <div id="preloader">
+    <div class="text-center">
+      <h2 class="font-display font-extrabold text-5xl tracking-widest" style="color:var(--accent)">FUOCO</h2>
+      <p class="mt-2 text-sm tracking-[0.3em] uppercase" style="color:var(--muted)">Artisan Pizza</p>
+      <div class="mt-6 w-56 h-1 overflow-hidden rounded-full" style="background:var(--border)"><div class="preloader-bar"></div></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <nav id="mainNav" class="fixed top-0 left-0 w-full z-[9000] transition-all duration-500" style="background:transparent;border-bottom:1px solid transparent">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <a href="#" class="font-display font-extrabold text-2xl tracking-widest" style="color:var(--accent)" aria-label="FUOCO Home">FUOCO</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Menu</a>
+        <a href="#why-us" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Our Craft</a>
+        <a href="#footer" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Contact</a>
+      </div>
+      <button id="navCartBtn" class="relative p-2 hover:text-accent transition-colors duration-300" style="color:var(--muted)" aria-label="Open cart">
+        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+        <span id="navCartBadge" class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--gold);color:var(--bg);display:none">0</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+  <div class="orb orb-3" aria-hidden="true"></div>
+
+  <!-- HERO -->
+  <section id="hero" class="relative min-h-screen flex items-center overflow-hidden">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-overlay"></div>
+    <div id="heroParticles" class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+    <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-24 pb-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+      <div class="flex-1 text-center lg:text-left">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-6" style="color:var(--accent)" id="heroTag">Wood-Fired Perfection</p>
+        <h1 class="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[0.95] mb-8" id="heroHeadline">CRAFTED WITH PASSION, DELIVERED HOT</h1>
+        <p class="text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 leading-relaxed" style="color:var(--muted)" id="heroSub">Handmade dough, 72-hour fermentation, San Marzano tomatoes, and the finest mozzarella — baked at 900 degrees in our imported Neapolitan oven.</p>
+        <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+          <button class="magnetic-btn" id="heroCta" aria-label="Order Now">
+            <span class="magnetic-btn-pulse" aria-hidden="true"></span>
+            <span class="relative z-10">Order Now</span>
+            <i data-lucide="arrow-right" class="w-5 h-5 relative z-10"></i>
+          </button>
+          <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300 flex items-center gap-2" style="color:var(--muted)">
+            <i data-lucide="play-circle" class="w-4 h-4"></i> View Full Menu
+          </a>
+        </div>
+      </div>
+      <div class="flex-shrink-0 hero-pizza-wrap relative" id="heroPizzaWrap">
+        <div class="hero-pizza-glow" aria-hidden="true"></div>
+        <div class="hero-pizza" id="heroPizza">
+          <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&h=800&fit=crop" alt="Artisan Neapolitan pizza" loading="eager" onerror="handleImgError(this)">
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10" id="scrollIndicator">
+      <span class="text-xs tracking-[0.2em] uppercase" style="color:var(--muted)">Scroll</span>
+      <div class="w-5 h-8 border border-charcoal-lighter rounded-full flex justify-center pt-1.5">
+        <div class="w-1 h-2 rounded-full" style="background:var(--accent);animation:scrollDot 1.5s ease-in-out infinite"></div>
+      </div>
+    </div>
+    <style>@keyframes scrollDot { 0%,100%{opacity:0;transform:translateY(0)} 50%{opacity:1;transform:translateY(8px)} }</style>
+  </section>
+
+  <!-- WHY US -->
+  <section id="why-us" class="horizontal-section relative py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6 mb-16">
+      <div class="reveal-up">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">Our Ingredients</p>
+        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-tight">Only The Finest<br>Make The Cut</h2>
+      </div>
+    </div>
+    <div class="horizontal-track px-6 lg:px-[max(1.5rem,calc((100vw-1280px)/2+1.5rem))]" id="ingredientTrack"></div>
+  </section>
+
+  <!-- MENU -->
+  <section id="menu" class="relative py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="reveal-up text-center mb-12">
+        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">The Menu</p>
+        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl">Choose Your Fire</h2>
+      </div>
+      <div class="reveal-up flex flex-wrap items-center justify-center gap-3 mb-14" id="filterBar" role="tablist" aria-label="Filter pizzas by category"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7" id="pizzaGrid"></div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="footer" class="relative border-t" style="border-color:var(--border)">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+        <div class="lg:col-span-1">
+          <h3 class="font-display font-extrabold text-3xl tracking-widest mb-4" style="color:var(--accent)">FUOCO</h3>
+          <p class="text-sm leading-relaxed" style="color:var(--muted)">Neapolitan pizza crafted with passion, baked at 900 degrees, and delivered to your door in under 30 minutes.</p>
+          <div class="flex gap-3 mt-6">
+            <a href="#" class="social-link" aria-label="Instagram"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+            <a href="#" class="social-link" aria-label="Twitter"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+            <a href="#" class="social-link" aria-label="Facebook"><i data-lucide="facebook" class="w-5 h-5"></i></a>
+            <a href="#" class="social-link" aria-label="Youtube"><i data-lucide="youtube" class="w-5 h-5"></i></a>
+          </div>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm tracking-widest uppercase mb-5">Navigate</h4>
+          <ul class="space-y-3">
+            <li><a href="#hero" class="nav-link text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Home</a></li>
+            <li><a href="#menu" class="nav-link text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Menu</a></li>
+            <li><a href="#why-us" class="nav-link text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Our Ingredients</a></li>
+            <li><a href="#" class="text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Catering</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm tracking-widest uppercase mb-5">Support</h4>
+          <ul class="space-y-3">
+            <li><a href="#" class="text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">FAQ</a></li>
+            <li><a href="#" class="text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Delivery Areas</a></li>
+            <li><a href="#" class="text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Allergen Info</a></li>
+            <li><a href="#" class="text-sm hover:text-accent transition-colors duration-300" style="color:var(--muted)">Contact Us</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm tracking-widest uppercase mb-5">Get In Touch</h4>
+          <ul class="space-y-3">
+            <li class="flex items-center gap-3 text-sm" style="color:var(--muted)"><i data-lucide="map-pin" class="w-4 h-4 flex-shrink-0" style="color:var(--accent)"></i>42 Ember Lane, Brooklyn NY</li>
+            <li class="flex items-center gap-3 text-sm" style="color:var(--muted)"><i data-lucide="phone" class="w-4 h-4 flex-shrink-0" style="color:var(--accent)"></i>(718) 555-FIRE</li>
+            <li class="flex items-center gap-3 text-sm" style="color:var(--muted)"><i data-lucide="clock" class="w-4 h-4 flex-shrink-0" style="color:var(--accent)"></i>Daily 11AM — Midnight</li>
+          </ul>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t" style="border-color:var(--border)">
+        <p class="text-xs" style="color:var(--muted)">&copy; 2025 FUOCO Artisan Pizza. All rights reserved.</p>
+        <button class="back-to-top" id="backToTop" aria-label="Back to top"><i data-lucide="arrow-up" class="w-5 h-5"></i></button>
+      </div>
+    </div>
+  </footer>
+
+  <div class="floating-cart" id="floatingCart" aria-label="Open cart">
+    <i data-lucide="shopping-bag" class="w-6 h-6 text-white"></i>
+    <span class="cart-badge" id="floatingCartBadge">0</span>
+  </div>
+
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <aside class="cart-drawer" id="cartDrawer" role="dialog" aria-label="Shopping cart">
+    <div class="flex items-center justify-between p-6 border-b" style="border-color:var(--border)">
+      <h3 class="font-display font-bold text-xl">Your Order</h3>
+      <button id="closeCartBtn" class="p-2 hover:text-accent transition-colors" style="color:var(--muted)" aria-label="Close cart"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6" id="cartItems"></div>
+    <div class="p-6 border-t" style="border-color:var(--border)" id="cartFooter"></div>
+  </aside>
+
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal-glass" id="customizerModal" role="dialog" aria-label="Customize your pizza">
+    <div id="modalContent"></div>
+  </div>
+
+  <script>
+    // ==========================================
+    // DATA
+    // ==========================================
+    const INGREDIENTS = [
+      { title: 'San Marzano Tomatoes', desc: 'Grown in the volcanic soil at the base of Mount Vesuvius. DOP-certified, sweet, and impossibly rich — the soul of every Neapolitan pie.', image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&h=400&fit=crop' },
+      { title: 'Fresh Mozzarella di Bufala', desc: 'Handcrafted daily from water buffalo milk in Campania. Creamy, delicate, and melts into silk under 900-degree heat.', image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=600&h=400&fit=crop' },
+      { title: '72-Hour Fermented Dough', desc: 'Our signature blend of tipo 00 flour, water, salt, and wild yeast. Three days of cold fermentation create an airy, charred cornicione.', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=400&fit=crop' },
+      { title: 'Tuscan Extra Virgin Olive Oil', desc: 'Cold-pressed from Frantoio olives harvested in late October. Drizzled raw post-bake for a peppery, grassy finish.', image: 'https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=600&h=400&fit=crop' }
+    ];
+
+    const PIZZAS = [
+      { id: 1, name: 'Margherita Classica', category: 'classic', price: 14.99, rating: 4.8, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&h=400&fit=crop', badge: null, description: 'San Marzano tomatoes, fresh mozzarella, basil, EVOO', tags: ['Vegetarian'] },
+      { id: 2, name: 'Diavola', category: 'spicy', price: 16.99, rating: 4.9, image: 'https://images.unsplash.com/photo-1588315029754-2dd089d39a1a?w=600&h=400&fit=crop', badge: 'spicy', description: 'Spicy salami, crushed chili, mozzarella, tomato sauce', tags: ['Spicy'] },
+      { id: 3, name: 'Quattro Formaggi', category: 'classic', price: 17.99, rating: 4.7, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=400&fit=crop', badge: 'best', description: 'Mozzarella, gorgonzola, parmesan, fontina, honey drizzle', tags: ['Vegetarian'] },
+      { id: 4, name: 'Truffle Mushroom', category: 'specialty', price: 19.99, rating: 5.0, image: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=600&h=400&fit=crop', badge: 'chef', description: 'Wild mushroom mix, truffle cream, mozzarella, arugula', tags: ['Vegetarian'] },
+      { id: 5, name: 'BBQ Chicken', category: 'specialty', price: 18.99, rating: 4.6, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=400&fit=crop', badge: null, description: 'Smoked chicken, red onion, cilantro, BBQ sauce, gouda', tags: [] },
+      { id: 6, name: 'Pepperoni Supreme', category: 'classic', price: 15.99, rating: 4.8, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=400&fit=crop', badge: null, description: 'Double pepperoni, mozzarella, house tomato sauce', tags: [] },
+      { id: 7, name: 'Prosciutto e Rucola', category: 'specialty', price: 18.49, rating: 4.9, image: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=600&h=400&fit=crop', badge: null, description: 'Prosciutto di Parma, arugula, shaved parmesan, mozzarella', tags: [] },
+      { id: 8, name: 'Veggie Garden', category: 'vegetarian', price: 15.49, rating: 4.5, image: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=600&h=400&fit=crop', badge: null, description: 'Bell peppers, red onion, mushrooms, olives, cherry tomatoes', tags: ['Vegetarian'] }
+    ];
+
+    const CATEGORIES = ['all', 'classic', 'specialty', 'vegetarian', 'spicy'];
+    const TOPPINGS = [
+      { id: 1, name: 'Extra Mozzarella', price: 1.50 }, { id: 2, name: 'Pepperoni', price: 2.00 },
+      { id: 3, name: 'Mushrooms', price: 1.50 }, { id: 4, name: 'Black Olives', price: 1.00 },
+      { id: 5, name: 'Jalapeños', price: 1.00 }, { id: 6, name: 'Truffle Oil Drizzle', price: 3.00 },
+      { id: 7, name: 'Prosciutto', price: 2.50 }, { id: 8, name: 'Fresh Basil', price: 0.75 },
+      { id: 9, name: 'Artichoke Hearts', price: 1.75 }, { id: 10, name: 'Anchovies', price: 1.50 }
+    ];
+    const SIZES = [
+      { key: 'S', label: 'Small', inches: '10"', multiplier: 0.8 },
+      { key: 'M', label: 'Medium', inches: '12"', multiplier: 1.0 },
+      { key: 'L', label: 'Large', inches: '14"', multiplier: 1.3 }
+    ];
+
+    function handleImgError(img) {
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = '1';
+      img.style.background = 'linear-gradient(135deg, #1a1a1a, #2a2a2a)';
+      img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Crect width='600' height='400' fill='%231a1a1a'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23333' font-family='sans-serif' font-size='14'%3EImage%3C/text%3E%3C/svg%3E";
+    }
+
+    // ==========================================
+    // SCROLL LOCK — stops Lenis + prevents body scroll
+    // ==========================================
+    let scrollLockCount = 0;
+
+    function lockScroll() {
+      scrollLockCount++;
+      document.body.style.overflow = 'hidden';
+      if (lenis) lenis.stop();
+    }
+
+    function unlockScroll() {
+      scrollLockCount = Math.max(0, scrollLockCount - 1);
+      if (scrollLockCount === 0) {
+        document.body.style.overflow = '';
+        if (lenis) lenis.start();
+      }
+    }
+
+    // ==========================================
+    // CART STORE
+    // ==========================================
+    const CartStore = {
+      items: [], listeners: [],
+      subscribe(fn) { this.listeners.push(fn); return () => { this.listeners = this.listeners.filter(l => l !== fn); }; },
+      notify() { this.listeners.forEach(fn => fn(this.items)); },
+      addItem(item) {
+        const key = item.id + '_' + item.size;
+        const existing = this.items.find(i => (i.id + '_' + i.size) === key);
+        if (existing) existing.quantity++; else this.items.push({ ...item, quantity: 1 });
+        this.notify();
+      },
+      removeItem(id, size) { this.items = this.items.filter(i => !(i.id === id && i.size === size)); this.notify(); },
+      updateQuantity(id, size, delta) {
+        const item = this.items.find(i => i.id === id && i.size === size);
+        if (item) { item.quantity += delta; if (item.quantity <= 0) this.removeItem(id, size); else this.notify(); }
+      },
+      getTotal() { return this.items.reduce((s, i) => s + i.price * i.quantity, 0); },
+      getCount() { return this.items.reduce((s, i) => s + i.quantity, 0); },
+      clear() { this.items = []; this.notify(); }
+    };
+
+    // ==========================================
+    // UTILITIES
+    // ==========================================
+    function showToast(msg) {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast'; t.textContent = msg; c.appendChild(t);
+      requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+      setTimeout(() => { t.classList.remove('show'); t.classList.add('hide'); setTimeout(() => t.remove(), 400); }, 3000);
+    }
+
+    function renderStars(r) {
+      const f = Math.floor(r); const h = r % 1 >= 0.5; let s = '';
+      for (let i = 0; i < f; i++) s += '<i data-lucide="star" class="w-3.5 h-3.5 star fill-current"></i>';
+      if (h) s += '<i data-lucide="star-half" class="w-3.5 h-3.5 star"></i>';
+      return s;
+    }
+
+    function safeImg(src, alt, cls) {
+      return '<img src="' + src + '" alt="' + alt + '" class="' + (cls || '') + '" loading="lazy" onerror="handleImgError(this)">';
+    }
+
+    // ==========================================
+    // RENDER: INGREDIENTS
+    // ==========================================
+    function renderIngredients() {
+      const t = document.getElementById('ingredientTrack');
+      t.innerHTML = INGREDIENTS.map((ing, i) =>
+        '<article class="ingredient-card relative" data-tilt>' +
+        '<div class="card-shine" aria-hidden="true"></div>' +
+        '<div class="overflow-hidden" style="height:240px">' + safeImg(ing.image, ing.title, 'w-full h-full object-cover') + '</div>' +
+        '<div class="p-7">' +
+        '<span class="text-xs font-semibold tracking-[0.2em] uppercase" style="color:var(--accent)">0' + (i + 1) + '</span>' +
+        '<h3 class="font-display font-bold text-xl mt-2 mb-3">' + ing.title + '</h3>' +
+        '<p class="text-sm leading-relaxed" style="color:var(--muted)">' + ing.desc + '</p>' +
+        '</div></article>'
+      ).join('');
+      if (window.innerWidth >= 768) t.innerHTML += '<div style="flex-shrink:0;width:1px"></div>';
+    }
+
+    // ==========================================
+    // RENDER: FILTER BAR
+    // ==========================================
+    let activeCategory = 'all';
+
+    function renderFilterBar() {
+      const bar = document.getElementById('filterBar');
+      bar.innerHTML = CATEGORIES.map(c =>
+        '<button class="filter-btn ' + (c === activeCategory ? 'active' : '') + '" data-category="' + c + '" role="tab" aria-selected="' + (c === activeCategory) + '">' +
+        c.charAt(0).toUpperCase() + c.slice(1) + '</button>'
+      ).join('');
+      bar.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          activeCategory = this.dataset.category;
+          renderFilterBar();
+          animateMenuFilter();
+        });
+      });
+    }
+
+    // ==========================================
+    // RENDER: PIZZA CARDS
+    // ==========================================
+    function renderPizzaCards() {
+      const grid = document.getElementById('pizzaGrid');
+      const filtered = activeCategory === 'all' ? PIZZAS : PIZZAS.filter(p => p.category === activeCategory);
+
+      grid.innerHTML = filtered.map(pizza => {
+        let badge = '';
+        if (pizza.badge === 'spicy') badge = '<span class="pizza-badge badge-spicy">Spicy</span>';
+        else if (pizza.badge === 'chef') badge = '<span class="pizza-badge badge-chef">Chef\'s Special</span>';
+        else if (pizza.badge === 'best') badge = '<span class="pizza-badge badge-best">Best Seller</span>';
+        const tags = pizza.tags.map(t => '<span class="text-xs px-2.5 py-1 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--muted)">' + t + '</span>').join('');
+        return '<article class="pizza-card" data-pizza-id="' + pizza.id + '">' +
+          '<div class="img-wrap">' + badge + safeImg(pizza.image, pizza.name, 'w-full h-full object-cover') + '</div>' +
+          '<div class="p-5">' +
+          '<div class="flex items-center gap-1.5 mb-2">' + renderStars(pizza.rating) + '<span class="text-xs ml-1" style="color:var(--muted)">' + pizza.rating + '</span></div>' +
+          '<h3 class="font-display font-bold text-lg mb-1">' + pizza.name + '</h3>' +
+          '<p class="text-xs mb-4 leading-relaxed" style="color:var(--muted)">' + pizza.description + '</p>' +
+          '<div class="flex flex-wrap gap-2 mb-5">' + tags + '</div>' +
+          '<div class="flex items-center justify-between">' +
+          '<span class="font-display font-extrabold text-2xl" style="color:var(--accent)">$' + pizza.price.toFixed(2) + '</span>' +
+          '<button class="customize-btn px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300" ' +
+          'style="background:rgba(255,94,20,0.12);color:var(--accent);border:1px solid rgba(255,94,20,0.3)" ' +
+          'data-pizza-id="' + pizza.id + '" aria-label="Customize ' + pizza.name + '">' +
+          'Customize & Add</button>' +
+          '</div></div></article>';
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+
+      // Bind customize buttons — use event delegation on the grid
+    }
+
+    // Event delegation for pizza grid — attached once, never lost on re-render
+    document.getElementById('pizzaGrid').addEventListener('click', function(e) {
+      const btn = e.target.closest('.customize-btn');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pizzaId = parseInt(btn.dataset.pizzaId);
+      if (isNaN(pizzaId)) return;
+      openCustomizer(pizzaId);
+    });
+
+    // Hover delegation for customize buttons
+    document.getElementById('pizzaGrid').addEventListener('mouseover', function(e) {
+      const btn = e.target.closest('.customize-btn');
+      if (btn) { btn.style.background = 'var(--accent)'; btn.style.color = '#fff'; }
+    });
+    document.getElementById('pizzaGrid').addEventListener('mouseout', function(e) {
+      const btn = e.target.closest('.customize-btn');
+      if (btn) { btn.style.background = 'rgba(255,94,20,0.12)'; btn.style.color = 'var(--accent)'; }
+    });
+
+    function animateMenuFilter() {
+      const grid = document.getElementById('pizzaGrid');
+      const ch = grid.children;
+      if (!ch.length) { renderPizzaCards(); return; }
+      gsap.to(ch, {
+        opacity: 0, y: 30, duration: 0.2, stagger: 0.02, ease: 'power2.in',
+        onComplete: () => {
+          renderPizzaCards();
+          gsap.from(grid.children, { opacity: 0, y: 40, duration: 0.5, stagger: 0.07, ease: 'power3.out' });
+        }
+      });
+    }
+
+    // ==========================================
+    // CUSTOMIZER MODAL
+    // ==========================================
+    let currentCustomizer = { pizza: null, size: 'M', toppings: [] };
+    let modalOpen = false;
+
+    function openCustomizer(pizzaId) {
+      const pizza = PIZZAS.find(p => p.id === pizzaId);
+      if (!pizza) return;
+      currentCustomizer = { pizza, size: 'M', toppings: [] };
+      modalOpen = true;
+      renderCustomizerModal();
+
+      // Lock scroll BEFORE showing modal to prevent any scroll leak
+      lockScroll();
+
+      // Show modal in next frame so lock takes effect first
+      requestAnimationFrame(() => {
+        document.getElementById('modalBackdrop').classList.add('open');
+        document.getElementById('customizerModal').classList.add('open');
+      });
+    }
+
+    function closeCustomizer() {
+      if (!modalOpen) return;
+      modalOpen = false;
+      document.getElementById('modalBackdrop').classList.remove('open');
+      document.getElementById('customizerModal').classList.remove('open');
+      unlockScroll();
+    }
+
+    function renderCustomizerModal() {
+      const { pizza, size, toppings } = currentCustomizer;
+      const sd = SIZES.find(s => s.key === size);
+      const bp = pizza.price * sd.multiplier;
+      const tp = toppings.reduce((s, id) => { const t = TOPPINGS.find(x => x.id === id); return s + (t ? t.price : 0); }, 0);
+      const total = bp + tp;
+
+      document.getElementById('modalContent').innerHTML =
+        '<div class="relative" style="height:220px;overflow:hidden;border-radius:28px 28px 0 0">' +
+          safeImg(pizza.image, pizza.name, 'w-full h-full object-cover') +
+          '<button id="modalCloseX" class="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);color:#fff;z-index:10;cursor:pointer;border:none" aria-label="Close">' +
+          '<i data-lucide="x" class="w-5 h-5"></i></button>' +
+        '</div>' +
+        '<div class="p-7">' +
+          '<h3 class="font-display font-bold text-2xl mb-1">' + pizza.name + '</h3>' +
+          '<p class="text-sm mb-6" style="color:var(--muted)">' + pizza.description + '</p>' +
+          '<div class="mb-7"><h4 class="text-sm font-semibold tracking-wide uppercase mb-3" style="color:var(--accent)">Choose Size</h4>' +
+          '<div class="flex gap-3">' + SIZES.map(s => {
+            const sp = (pizza.price * s.multiplier).toFixed(2);
+            return '<button class="size-btn ' + (s.key === size ? 'active' : '') + '" data-size-key="' + s.key + '">' +
+              '<div class="font-semibold text-sm">' + s.label + '</div>' +
+              '<div class="text-xs mt-1" style="color:var(--muted)">' + s.inches + '</div>' +
+              '<div class="text-sm font-bold mt-1" style="color:' + (s.key === size ? 'var(--accent)' : 'var(--fg)') + '">$' + sp + '</div></button>';
+          }).join('') + '</div></div>' +
+          '<div class="mb-7"><h4 class="text-sm font-semibold tracking-wide uppercase mb-3" style="color:var(--accent)">Extra Toppings</h4>' +
+          '<div class="grid grid-cols-2 gap-2.5">' + TOPPINGS.map(t => {
+            const sel = toppings.includes(t.id);
+            return '<div class="topping-check ' + (sel ? 'selected' : '') + '" data-topping-id="' + t.id + '">' +
+              '<div class="check-box">' + (sel ? '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>' : '') + '</div>' +
+              '<div class="flex-1 min-w-0"><div class="text-sm font-medium truncate">' + t.name + '</div>' +
+              '<div class="text-xs" style="color:var(--muted)">+$' + t.price.toFixed(2) + '</div></div></div>';
+          }).join('') + '</div></div>' +
+          '<div class="flex items-center justify-between pt-5 border-t" style="border-color:var(--border)">' +
+            '<div><div class="text-xs" style="color:var(--muted)">Total</div>' +
+            '<div class="font-display font-extrabold text-3xl" style="color:var(--accent)">$' + total.toFixed(2) + '</div></div>' +
+            '<button id="addToCartFromModal" class="magnetic-btn" style="padding:14px 32px;font-size:0.9rem">' +
+            '<span class="relative z-10">Add to Cart</span>' +
+            '<i data-lucide="shopping-bag" class="w-4 h-4 relative z-10"></i></button>' +
+          '</div>' +
+        '</div>';
+
+      if (window.lucide) lucide.createIcons();
+      bindCustomizerEvents();
+    }
+
+    function bindCustomizerEvents() {
+      const cx = document.getElementById('modalCloseX');
+      if (cx) cx.addEventListener('mousedown', function(e) { e.preventDefault(); });
+
+      document.querySelectorAll('#modalContent .size-btn').forEach(btn => {
+        btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+        btn.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          currentCustomizer.size = this.dataset.sizeKey;
+          renderCustomizerModal();
+        });
+      });
+
+      document.querySelectorAll('#modalContent .topping-check').forEach(el => {
+        el.addEventListener('mousedown', function(e) { e.preventDefault(); });
+        el.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          const id = parseInt(this.dataset.toppingId);
+          const idx = currentCustomizer.toppings.indexOf(id);
+          if (idx > -1) currentCustomizer.toppings.splice(idx, 1);
+          else currentCustomizer.toppings.push(id);
+          renderCustomizerModal();
+        });
+      });
+
+      const addBtn = document.getElementById('addToCartFromModal');
+      if (addBtn) {
+        addBtn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+        addBtn.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          const { pizza, size, toppings } = currentCustomizer;
+          const sd = SIZES.find(s => s.key === size);
+          const bp = pizza.price * sd.multiplier;
+          const tp = toppings.reduce((s, id) => { const t = TOPPINGS.find(x => x.id === id); return s + (t ? t.price : 0); }, 0);
+          CartStore.addItem({
+            id: pizza.id, name: pizza.name, size: size, sizeLabel: sd.label,
+            price: bp + tp, image: pizza.image,
+            toppings: toppings.map(id => TOPPINGS.find(t => t.id === id)?.name).filter(Boolean)
+          });
+          showToast(pizza.name + ' (' + sd.label + ') added to cart');
+          closeCustomizer();
+        });
+        initMagneticButton(addBtn);
+      }
+    }
+
+    // ==========================================
+    // CART DRAWER
+    // ==========================================
+    let cartOpen = false;
+
+    function openCart() {
+      if (cartOpen) return;
+      cartOpen = true;
+      document.getElementById('cartOverlay').classList.add('open');
+      document.getElementById('cartDrawer').classList.add('open');
+      lockScroll();
+    }
+
+    function closeCart() {
+      if (!cartOpen) return;
+      cartOpen = false;
+      document.getElementById('cartOverlay').classList.remove('open');
+      document.getElementById('cartDrawer').classList.remove('open');
+      unlockScroll();
+    }
+
+    function renderCart() {
+      const items = CartStore.items;
+      const el = document.getElementById('cartItems');
+      const ft = document.getElementById('cartFooter');
+
+      if (!items.length) {
+        el.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center py-16"><i data-lucide="shopping-bag" class="w-16 h-16 mb-4" style="color:var(--border)"></i><p class="font-display font-bold text-lg mb-2">Your cart is empty</p><p class="text-sm" style="color:var(--muted)">Add some delicious pizzas to get started</p></div>';
+        ft.innerHTML = '';
+      } else {
+        el.innerHTML = items.map(item =>
+          '<div class="flex gap-4 mb-5 pb-5 border-b" style="border-color:var(--border)">' +
+          safeImg(item.image, item.name, 'w-20 h-20 rounded-xl object-cover flex-shrink-0') +
+          '<div class="flex-1 min-w-0"><h4 class="font-display font-bold text-sm truncate">' + item.name + '</h4>' +
+          '<p class="text-xs mt-0.5" style="color:var(--muted)">' + item.sizeLabel + (item.toppings.length ? ' + ' + item.toppings.join(', ') : '') + '</p>' +
+          '<p class="font-bold text-sm mt-1" style="color:var(--accent)">$' + item.price.toFixed(2) + '</p>' +
+          '<div class="flex items-center gap-3 mt-2">' +
+          '<button class="cart-act w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style="background:var(--border);color:var(--fg)" data-action="dec" data-id="' + item.id + '" data-size="' + item.size + '">-</button>' +
+          '<span class="text-sm font-semibold w-5 text-center">' + item.quantity + '</span>' +
+          '<button class="cart-act w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style="background:var(--border);color:var(--fg)" data-action="inc" data-id="' + item.id + '" data-size="' + item.size + '">+</button>' +
+          '<button class="cart-act ml-auto p-1 hover:text-red-400 transition-colors" style="color:var(--muted)" data-action="remove" data-id="' + item.id + '" data-size="' + item.size + '"><i data-lucide="trash-2" class="w-4 h-4"></i></button>' +
+          '</div></div></div>'
+        ).join('');
+
+        ft.innerHTML =
+          '<div class="flex items-center justify-between mb-4"><span class="text-sm" style="color:var(--muted)">Subtotal</span><span class="font-display font-bold text-xl">$' + CartStore.getTotal().toFixed(2) + '</span></div>' +
+          '<button id="checkoutBtn" class="w-full py-4 rounded-2xl font-display font-bold text-base tracking-wide transition-all duration-300 hover:shadow-lg" style="background:var(--accent);color:#fff">Proceed to Checkout</button>' +
+          '<button id="clearCartBtn" class="w-full py-3 mt-2 rounded-2xl text-sm font-medium transition-colors hover:text-accent" style="color:var(--muted);background:transparent;border:1px solid var(--border)">Clear Cart</button>';
+      }
+
+      if (window.lucide) lucide.createIcons();
+
+      const count = CartStore.getCount();
+      const nb = document.getElementById('navCartBadge');
+      const fb = document.getElementById('floatingCartBadge');
+      const fc = document.getElementById('floatingCart');
+      nb.textContent = count; nb.style.display = count > 0 ? 'flex' : 'none';
+      fb.textContent = count;
+      if (count > 0) {
+        fc.classList.add('visible'); fb.classList.add('visible');
+        fb.classList.remove('bump'); void fb.offsetWidth; fb.classList.add('bump');
+      } else { fc.classList.remove('visible'); fb.classList.remove('visible'); }
+    }
+
+    // Event delegation for cart actions
+    document.getElementById('cartItems').addEventListener('click', function(e) {
+      const btn = e.target.closest('.cart-act');
+      if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      const a = btn.dataset.action, id = parseInt(btn.dataset.id), sz = btn.dataset.size;
+      if (a === 'inc') CartStore.updateQuantity(id, sz, 1);
+      else if (a === 'dec') CartStore.updateQuantity(id, sz, -1);
+      else if (a === 'remove') { CartStore.removeItem(id, sz); showToast('Item removed'); }
+    });
+
+    // Event delegation for cart footer buttons
+    document.getElementById('cartFooter').addEventListener('click', function(e) {
+      if (e.target.closest('#checkoutBtn')) { e.preventDefault(); showToast('Checkout coming soon — thanks for your interest!'); }
+      if (e.target.closest('#clearCartBtn')) { e.preventDefault(); CartStore.clear(); showToast('Cart cleared'); }
+    });
+
+    CartStore.subscribe(renderCart);
+
+    // ==========================================
+    // MAGNETIC BUTTON
+    // ==========================================
+    function initMagneticButton(btn) {
+      if (!btn) return;
+      btn.addEventListener('mousemove', function(e) {
+        const r = this.getBoundingClientRect();
+        gsap.to(this, { x: (e.clientX - r.left - r.width / 2) * 0.3, y: (e.clientY - r.top - r.height / 2) * 0.3, duration: 0.3, ease: 'power2.out' });
+      });
+      btn.addEventListener('mouseleave', function() {
+        gsap.to(this, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+      });
+    }
+
+    // ==========================================
+    // 3D TILT
+    // ==========================================
+    function initTiltEffect(card) {
+      card.addEventListener('mousemove', function(e) {
+        const r = this.getBoundingClientRect();
+        gsap.to(this, { rotateY: ((e.clientX - r.left) / r.width - 0.5) * 12, rotateX: -((e.clientY - r.top) / r.height - 0.5) * 12, duration: 0.4, ease: 'power2.out', transformPerspective: 800 });
+      });
+      card.addEventListener('mouseleave', function() {
+        gsap.to(this, { rotateY: 0, rotateX: 0, duration: 0.7, ease: 'elastic.out(1, 0.3)', transformPerspective: 800 });
+      });
+    }
+
+    // ==========================================
+    // HERO PARTICLES
+    // ==========================================
+    function createHeroParticles() {
+      const c = document.getElementById('heroParticles');
+      const cols = ['var(--accent)', 'var(--gold)', 'rgba(255,94,20,0.6)', 'rgba(255,184,0,0.5)'];
+      for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div'); p.className = 'hero-particle';
+        const sz = Math.random() * 6 + 2;
+        p.style.cssText = '--dur:' + (Math.random() * 6 + 6) + 's;--delay:' + (Math.random() * 8) + 's;--op:' + (Math.random() * 0.5 + 0.2) + ';width:' + sz + 'px;height:' + sz + 'px;left:' + (Math.random() * 100) + '%;bottom:' + (Math.random() * 30) + '%;background:' + cols[Math.floor(Math.random() * cols.length)];
+        c.appendChild(p);
+      }
+    }
+
+    // ==========================================
+    // SPLIT TEXT
+    // ==========================================
+    function splitText(el) {
+      const txt = el.textContent; el.innerHTML = '';
+      txt.split(' ').forEach((w, wi) => {
+        if (wi > 0) { const s = document.createElement('span'); s.innerHTML = '&nbsp;'; s.style.cssText = 'display:inline-block;width:0.3em'; el.appendChild(s); }
+        [...w].forEach(ch => { const s = document.createElement('span'); s.className = 'char-reveal'; s.textContent = ch; s.style.display = 'inline-block'; el.appendChild(s); });
+      });
+      return el.querySelectorAll('.char-reveal');
+    }
+
+    // ==========================================
+    // LENIS
+    // ==========================================
+    let lenis = null;
+
+    function initSmoothScroll() {
+      try {
+        lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), orientation: 'vertical', gestureOrientation: 'vertical', smoothWheel: true, wheelMultiplier: 1, touchMultiplier: 2 });
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add(time => { if (lenis) lenis.raf(time * 1000); });
+        gsap.ticker.lagSmoothing(0);
+      } catch (e) { console.warn('Lenis unavailable.'); }
+    }
+
+    function scrollToTop() { if (lenis) lenis.scrollTo(0, { duration: 2 }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function scrollToElement(sel) {
+      const el = document.querySelector(sel); if (!el) return;
+      if (lenis) lenis.scrollTo(el, { offset: -80, duration: 1.5 });
+      else el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ==========================================
+    // GSAP ANIMATIONS
+    // ==========================================
+    function initAnimations() {
+      gsap.registerPlugin(ScrollTrigger);
+
+      gsap.to('#scroll-progress', { scaleX: 1, ease: 'none', scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 0.3 } });
+
+      ScrollTrigger.create({ start: 'top -80', onUpdate: self => { const n = document.getElementById('mainNav'); if (self.progress > 0) n.classList.add('nav-solid'); else n.classList.remove('nav-solid'); } });
+
+      const headline = document.getElementById('heroHeadline');
+      const chars = splitText(headline);
+      gsap.set('#heroTag', { opacity: 0, y: 20 });
+      gsap.set('#heroSub', { opacity: 0, y: 20 });
+      gsap.set('#heroCta', { opacity: 0, y: 30 });
+      gsap.set('#scrollIndicator', { opacity: 0 });
+
+      const tl = gsap.timeline({ delay: 0.2 });
+      tl.to('#heroTag', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+        .from(chars, { opacity: 0, y: 80, rotateX: -90, duration: 0.8, stagger: 0.02, ease: 'power3.out' }, '-=0.4')
+        .to('#heroSub', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
+        .from('#heroCta', { opacity: 0, y: 30, duration: 0.7, ease: 'power3.out' }, '-=0.4')
+        .from('#heroPizzaWrap', { opacity: 0, scale: 0.7, rotation: -15, duration: 1.2, ease: 'power3.out' }, '-=0.8')
+        .to('#scrollIndicator', { opacity: 1, duration: 0.6 }, '-=0.2');
+
+      gsap.to('#heroBg', { y: 150, scale: 1.15, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
+      gsap.to('#heroPizza', { rotationY: 180, rotationX: 20, y: -100, scale: 0.7, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 1.5 } });
+      gsap.to('#heroPizza', { y: '+=15', duration: 3, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+      gsap.to('#scrollIndicator', { opacity: 0, scrollTrigger: { trigger: '#hero', start: '10% top', end: '20% top', scrub: true } });
+
+      // Horizontal scroll
+      const track = document.getElementById('ingredientTrack');
+      function setupHScroll() {
+        if (window.innerWidth < 768) return;
+        const dist = Math.max(0, track.scrollWidth - window.innerWidth + 100);
+        if (dist <= 0) return;
+        gsap.to(track, { x: -dist, ease: 'none', scrollTrigger: { trigger: '#why-us', start: 'top top', end: () => '+=' + dist, pin: true, scrub: 1, anticipatePin: 1, invalidateOnRefresh: true } });
+      }
+      if (document.readyState === 'complete') setupHScroll();
+      else window.addEventListener('load', () => { ScrollTrigger.refresh(); setupHScroll(); });
+
+      document.querySelectorAll('[data-tilt]').forEach(initTiltEffect);
+      gsap.utils.toArray('.reveal-up').forEach(el => { gsap.to(el, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none none' } }); });
+
+      ScrollTrigger.create({ trigger: '#pizzaGrid', start: 'top 80%', once: true, onEnter: () => { gsap.from('#pizzaGrid .pizza-card', { opacity: 0, y: 50, duration: 0.6, stagger: 0.1, ease: 'power3.out' }); } });
+    }
+
+    // ==========================================
+    // GLOBAL EVENTS
+    // ==========================================
+    function bindGlobalEvents() {
+      document.getElementById('navCartBtn').addEventListener('click', function(e) { e.preventDefault(); openCart(); });
+      document.getElementById('floatingCart').addEventListener('click', function(e) { e.preventDefault(); openCart(); });
+      document.getElementById('closeCartBtn').addEventListener('click', function(e) { e.preventDefault(); closeCart(); });
+      document.getElementById('cartOverlay').addEventListener('click', function(e) { e.preventDefault(); closeCart(); });
+      document.getElementById('modalBackdrop').addEventListener('click', function(e) { e.preventDefault(); closeCustomizer(); });
+      document.getElementById('customizerModal').addEventListener('click', function(e) { if (e.target === this) { e.preventDefault(); closeCustomizer(); } });
+
+      document.getElementById('heroCta').addEventListener('click', function(e) { e.preventDefault(); scrollToElement('#menu'); });
+
+      // Nav links — use event delegation
+      document.querySelectorAll('.nav-link').forEach(a => {
+        a.addEventListener('click', function(e) {
+          const href = this.getAttribute('href');
+          if (href && href !== '#') { e.preventDefault(); scrollToElement(href); }
+        });
+      });
+
+      document.getElementById('backToTop').addEventListener('click', function(e) { e.preventDefault(); scrollToTop(); });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { closeCustomizer(); closeCart(); }
+      });
+
+      // Prevent any wheel/touch scroll from leaking when modal or cart is open
+      document.getElementById('customizerModal').addEventListener('wheel', function(e) { e.stopPropagation(); }, { passive: true });
+      document.getElementById('customizerModal').addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: true });
+    }
+
+    // ==========================================
+    // INIT
+    // ==========================================
+    function init() {
+      renderIngredients();
+      renderFilterBar();
+      renderPizzaCards();
+      renderCart();
+      createHeroParticles();
+      bindGlobalEvents();
+      if (window.lucide) lucide.createIcons();
+      initMagneticButton(document.getElementById('heroCta'));
+      initSmoothScroll();
+
+      const pb = document.querySelector('.preloaderBar');
+      const pl = document.getElementById('preloader');
+      gsap.to(pb, {
+        width: '100%', duration: 1.4, ease: 'power2.inOut',
+        onComplete: () => {
+          gsap.to(pl, { opacity: 0, duration: 0.5, ease: 'power2.in', onComplete: () => { pl.style.display = 'none'; initAnimations(); } });
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  </script>
+</body>
+</html>
