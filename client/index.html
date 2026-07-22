@@ -184,10 +184,16 @@
     .stock-badge-low { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .stock-badge-ok { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
 
-    @media(max-width:768px) { .hero-pizza { width: 240px; height: 240px; } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @media(max-width:768px) { 
+      .hero-pizza { width: 260px; height: 260px; } 
+      .modal-glass { width: 95%; padding: 1.25rem; }
+    }
   </style>
 </head>
-<body>
+<body class="selection:bg-accent selection:text-white">
   <svg style="position:fixed;width:0;height:0" aria-hidden="true">
     <filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
   </svg>
@@ -195,23 +201,24 @@
   <div id="scroll-progress"></div>
 
   <div id="preloader">
-    <div class="text-center">
-      <h2 class="font-display font-extrabold text-5xl tracking-widest" style="color:var(--accent)">FUOCO</h2>
-      <p class="mt-2 text-sm tracking-[0.3em] uppercase" style="color:var(--muted)">Artisan Pizza & Custom Builder</p>
-      <div class="mt-6 w-56 h-1 overflow-hidden rounded-full" style="background:var(--border)"><div class="preloader-bar" id="preloaderBar"></div></div>
+    <div class="text-center px-4">
+      <h2 class="font-display font-extrabold text-4xl sm:text-5xl tracking-widest" style="color:var(--accent)">FUOCO</h2>
+      <p class="mt-2 text-xs sm:text-sm tracking-[0.3em] uppercase" style="color:var(--muted)">Artisan Pizza & Custom Builder</p>
+      <div class="mt-6 w-48 sm:w-56 h-1 overflow-hidden rounded-full mx-auto" style="background:var(--border)"><div class="preloader-bar" id="preloaderBar"></div></div>
     </div>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- NAVBAR -->
-  <nav id="mainNav" class="fixed top-0 left-0 w-full z-[9000] transition-all duration-500" style="background:transparent;border-bottom:1px solid transparent">
-    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+  <nav id="mainNav" class="fixed top-0 left-0 w-full z-[9000] transition-all duration-500 bg-charcoal/80 backdrop-blur-lg border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
       <a href="#" class="font-display font-extrabold text-2xl tracking-widest flex items-center gap-2" style="color:var(--accent)" aria-label="FUOCO Home">
         <span>FUOCO</span>
         <span class="text-[10px] px-2 py-0.5 rounded-full border border-orange-500/30 text-orange-400 font-sans tracking-normal font-semibold">MERN</span>
       </a>
       
+      <!-- Desktop Links -->
       <div class="hidden md:flex items-center gap-8">
         <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300" style="color:var(--muted)">Menu</a>
         <button id="openBuilderBtn" class="text-sm font-semibold tracking-wide text-amber-400 hover:text-orange-400 transition-colors flex items-center gap-1.5">
@@ -224,25 +231,73 @@
         </button>
       </div>
 
-      <div class="flex items-center gap-4">
-        <!-- Auth Container -->
-        <div id="authNavButtons" class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-4">
+        <!-- Auth Container Desktop -->
+        <div id="authNavButtons" class="hidden sm:flex items-center gap-2.5">
           <button id="loginModalBtn" class="text-xs font-semibold px-4 py-2 rounded-full border border-charcoal-lighter hover:border-accent text-white transition-all">Log In</button>
           <button id="registerModalBtn" class="text-xs font-semibold px-4 py-2 rounded-full bg-accent text-white hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/30">Register</button>
         </div>
         
-        <div id="userInfoNav" class="hidden flex items-center gap-3">
-          <span id="navUserName" class="text-xs font-medium text-amber-400"></span>
+        <div id="userInfoNav" class="hidden flex items-center gap-2.5">
+          <span id="navUserName" class="text-xs font-medium text-amber-400 truncate max-w-[90px] sm:max-w-none"></span>
           <button id="logoutBtn" class="text-xs text-stone-400 hover:text-red-400 transition-colors">Logout</button>
         </div>
 
-        <button id="navCartBtn" class="relative p-2 hover:text-accent transition-colors duration-300" style="color:var(--muted)" aria-label="Open cart">
+        <button id="navCartBtn" class="relative p-2 text-stone-300 hover:text-accent transition-colors duration-300" aria-label="Open cart">
           <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-          <span id="navCartBadge" class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--gold);color:var(--bg);display:none">0</span>
+          <span id="navCartBadge" class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center bg-amber-400 text-stone-950" style="display:none">0</span>
+        </button>
+
+        <!-- Mobile Hamburger Toggle Button -->
+        <button id="mobileMenuToggleBtn" class="flex md:hidden p-2 text-stone-300 hover:text-accent transition-colors focus:outline-none" aria-label="Toggle Menu">
+          <i data-lucide="menu" class="w-6 h-6" id="mobileMenuIcon"></i>
         </button>
       </div>
     </div>
   </nav>
+
+  <!-- MOBILE NAVIGATION OVERLAY DRAWER -->
+  <div id="mobileMenuDrawer" class="fixed inset-0 z-[8999] bg-charcoal/95 backdrop-blur-2xl flex flex-col justify-between p-6 opacity-0 pointer-events-none transition-all duration-300 md:hidden border-b border-charcoal-lighter" style="top: 65px; height: calc(100vh - 65px);">
+    <div class="space-y-4 pt-2">
+      <a href="#menu" class="mobile-nav-link text-base font-bold flex items-center justify-between text-stone-200 hover:text-accent pb-3 border-b border-charcoal-lighter">
+        <span class="flex items-center gap-2.5"><i data-lucide="utensils" class="w-5 h-5 text-accent"></i> Explore Menu</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-500"></i>
+      </a>
+      <button id="mobileOpenBuilderBtn" class="mobile-nav-link w-full text-left text-base font-bold flex items-center justify-between text-amber-400 hover:text-orange-400 pb-3 border-b border-charcoal-lighter">
+        <span class="flex items-center gap-2.5"><i data-lucide="chef-hat" class="w-5 h-5 text-amber-400"></i> 4-Step Custom Pizza Builder</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-amber-500/50"></i>
+      </button>
+      <a href="#why-us" class="mobile-nav-link text-base font-bold flex items-center justify-between text-stone-200 hover:text-accent pb-3 border-b border-charcoal-lighter">
+        <span class="flex items-center gap-2.5"><i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i> Our Artisan Craft</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-500"></i>
+      </a>
+      <button id="mobileMyOrdersBtn" class="mobile-nav-link hidden w-full text-left text-base font-bold flex items-center justify-between text-stone-200 hover:text-accent pb-3 border-b border-charcoal-lighter">
+        <span class="flex items-center gap-2.5"><i data-lucide="package" class="w-5 h-5 text-accent"></i> My Live Orders</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-500"></i>
+      </button>
+      <button id="mobileAdminPanelBtn" class="mobile-nav-link hidden w-full text-left text-base font-bold flex items-center justify-between text-red-400 hover:text-red-300 pb-3 border-b border-charcoal-lighter">
+        <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-5 h-5 text-red-400"></i> Store Admin Dashboard</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-red-500/50"></i>
+      </button>
+    </div>
+
+    <!-- Mobile Auth / User Panel at Bottom -->
+    <div class="pt-4 border-t border-charcoal-lighter">
+      <div id="mobileAuthButtons" class="flex flex-col gap-2.5">
+        <button id="mobileLoginBtn" class="w-full py-3 rounded-xl border border-charcoal-lighter hover:border-accent text-white font-semibold text-sm transition-all text-center">Log In</button>
+        <button id="mobileRegisterBtn" class="w-full py-3 rounded-xl bg-accent text-white font-semibold text-sm hover:bg-orange-600 transition-all text-center shadow-lg shadow-orange-900/30">Register Account</button>
+      </div>
+      <div id="mobileUserInfo" class="hidden flex items-center justify-between p-3 rounded-xl bg-charcoal-light border border-charcoal-lighter">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-accent font-bold text-xs">
+            <i data-lucide="user" class="w-4 h-4"></i>
+          </div>
+          <span id="mobileUserName" class="text-sm font-semibold text-amber-400"></span>
+        </div>
+        <button id="mobileLogoutBtn" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-medium transition-colors">Logout</button>
+      </div>
+    </div>
+  </div>
 
   <div class="orb orb-1" aria-hidden="true"></div>
   <div class="orb orb-2" aria-hidden="true"></div>
@@ -253,20 +308,20 @@
     <div class="hero-bg" id="heroBg"></div>
     <div class="hero-overlay"></div>
     <div id="heroParticles" class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-    <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-24 pb-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full pt-28 pb-16 flex flex-col lg:flex-row items-center gap-10 lg:gap-8">
       <div class="flex-1 text-center lg:text-left">
-        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-6" style="color:var(--accent)" id="heroTag">Wood-Fired Perfection & Live Inventory</p>
-        <h1 class="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[0.95] mb-8" id="heroHeadline">CRAFT YOUR OWN PIZZA, DELIVERED HOT</h1>
-        <p class="text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 leading-relaxed" style="color:var(--muted)" id="heroSub">
+        <p class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase mb-4 sm:mb-6" style="color:var(--accent)" id="heroTag">Wood-Fired Perfection & Live Inventory</p>
+        <h1 class="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[0.95] mb-6 sm:mb-8 tracking-tight" id="heroHeadline">CRAFT YOUR OWN PIZZA, DELIVERED HOT</h1>
+        <p class="text-sm sm:text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-8 sm:mb-10 leading-relaxed" style="color:var(--muted)" id="heroSub">
           Choose your base, sauce, cheese, and fresh vegetables in our 4-Step Interactive Pizza Builder with instant Razorpay checkout & automated inventory tracking.
         </p>
-        <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-          <button class="magnetic-btn" id="heroCustomBuilderCta">
+        <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start w-full sm:w-auto">
+          <button class="magnetic-btn w-full sm:w-auto justify-center" id="heroCustomBuilderCta">
             <span class="magnetic-btn-pulse" aria-hidden="true"></span>
-            <i data-lucide="sparkles" class="w-5 h-5 relative z-10"></i>
+            <i data-lucide="sparkles" class="w-5 h-5 relative z-10 text-amber-300"></i>
             <span class="relative z-10">Build Custom Pizza</span>
           </button>
-          <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300 flex items-center gap-2" style="color:var(--muted)">
+          <a href="#menu" class="nav-link text-sm font-medium tracking-wide hover:text-accent transition-colors duration-300 flex items-center justify-center gap-2 py-2" style="color:var(--muted)">
             <i data-lucide="utensils" class="w-4 h-4"></i> View Classic Menu
           </a>
         </div>
@@ -279,7 +334,7 @@
       </div>
     </div>
     <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10" id="scrollIndicator">
-      <span class="text-xs tracking-[0.2em] uppercase" style="color:var(--muted)">Scroll</span>
+      <span class="text-[10px] tracking-[0.2em] uppercase text-stone-400">Scroll</span>
       <div class="w-5 h-8 border border-charcoal-lighter rounded-full flex justify-center pt-1.5">
         <div class="w-1 h-2 rounded-full" style="background:var(--accent);animation:scrollDot 1.5s ease-in-out infinite"></div>
       </div>
@@ -288,43 +343,62 @@
   </section>
 
   <!-- WHY US / CRAFT -->
-  <section id="why-us" class="horizontal-section relative py-24 lg:py-32">
-    <div class="max-w-7xl mx-auto px-6 mb-16">
+  <section id="why-us" class="horizontal-section relative py-20 lg:py-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-12 sm:mb-16">
       <div class="reveal-up">
-        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">Our Ingredients</p>
-        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-tight">Only The Finest<br>Make The Cut</h2>
+        <p class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase mb-3 sm:mb-4" style="color:var(--accent)">Our Ingredients</p>
+        <h2 class="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl leading-tight">Only The Finest<br>Make The Cut</h2>
       </div>
     </div>
-    <div class="horizontal-track px-6 lg:px-[max(1.5rem,calc((100vw-1280px)/2+1.5rem))]" id="ingredientTrack"></div>
+    <div class="horizontal-track px-4 sm:px-6 lg:px-[max(1.5rem,calc((100vw-1280px)/2+1.5rem))]" id="ingredientTrack"></div>
   </section>
 
   <!-- MENU SECTION -->
-  <section id="menu" class="relative py-24 lg:py-32">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="reveal-up text-center mb-12">
-        <p class="text-sm font-semibold tracking-[0.3em] uppercase mb-4" style="color:var(--accent)">Preset & Custom Creations</p>
-        <h2 class="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl">Choose Your Fire</h2>
+  <section id="menu" class="relative py-20 lg:py-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="reveal-up text-center mb-10 sm:mb-12">
+        <p class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase mb-3 sm:mb-4" style="color:var(--accent)">Preset & Custom Creations</p>
+        <h2 class="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl">Choose Your Fire</h2>
       </div>
-      <div class="reveal-up flex flex-wrap items-center justify-center gap-3 mb-14" id="filterBar"></div>
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7" id="pizzaGrid"></div>
+      <div class="reveal-up flex items-center justify-start sm:justify-center gap-2.5 sm:gap-3 mb-10 sm:mb-14 overflow-x-auto pb-3 pt-1 px-1 no-scrollbar" id="filterBar"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-7" id="pizzaGrid"></div>
     </div>
   </section>
 
   <!-- FOOTER -->
-  <footer id="footer" class="relative border-t border-charcoal-lighter">
-    <div class="max-w-7xl mx-auto px-6 py-16">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-charcoal-lighter pb-12">
+  <footer id="footer" class="relative border-t border-charcoal-lighter bg-charcoal/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-16">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-8 border-b border-charcoal-lighter pb-12 text-center md:text-left">
         <div>
-          <h3 class="font-display font-extrabold text-3xl tracking-widest" style="color:var(--accent)">FUOCO</h3>
-          <p class="text-xs text-stone-400 mt-1">Full-Stack MERN Artisan Pizza & Live Inventory Management</p>
+          <div class="flex items-center justify-center md:justify-start gap-3">
+            <h3 class="font-display font-extrabold text-3xl tracking-widest" style="color:var(--accent)">FUOCO</h3>
+            <span class="text-[10px] px-2.5 py-0.5 rounded-full border border-amber-500/30 text-amber-400 font-sans font-semibold uppercase">MERN Stack</span>
+          </div>
+          <p class="text-xs text-stone-400 mt-2 max-w-md">Full-Stack MERN Artisan Pizza Ordering & Real-Time Live Inventory Management System.</p>
         </div>
-        <div class="flex gap-4">
-          <button id="footerBuilderBtn" class="text-xs font-bold px-5 py-3 rounded-full bg-accent text-white hover:bg-orange-600 transition-all shadow-lg">Start Custom Builder</button>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <a href="#menu" class="nav-link text-xs font-semibold px-5 py-2.5 rounded-full border border-charcoal-lighter hover:border-accent text-stone-300 hover:text-white transition-all">Explore Menu</a>
+          <button id="footerBuilderBtn" class="text-xs font-bold px-6 py-2.5 rounded-full bg-accent text-white hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/30 flex items-center gap-2">
+            <i data-lucide="chef-hat" class="w-4 h-4"></i> Start Custom Builder
+          </button>
         </div>
       </div>
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-stone-500">
-        <p>&copy; 2026 FUOCO Artisan Pizza. Powered by Node.js, Express, MongoDB, Nodemailer, Razorpay & Socket.io.</p>
-        <button id="backToTop" class="p-3 rounded-full border border-charcoal-lighter text-stone-400 hover:text-accent hover:border-accent transition-colors"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+      
+      <!-- Footer Bottom Row with Rehan Ansari Signature -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-stone-500 text-center sm:text-left">
+        <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <p>&copy; 2026 FUOCO Artisan Pizza. All rights reserved.</p>
+          <span class="hidden sm:inline text-stone-700">•</span>
+          <p class="inline-flex items-center gap-1.5 font-medium text-stone-300 bg-charcoal-light px-3 py-1 rounded-full border border-charcoal-lighter shadow-sm">
+            <span>Made with</span>
+            <span class="text-red-500 animate-pulse">❤️</span>
+            <span>by</span>
+            <span class="font-bold text-amber-400 tracking-wide">Rehan Ansari</span>
+          </p>
+        </div>
+        <button id="backToTop" class="p-3 rounded-full border border-charcoal-lighter text-stone-400 hover:text-accent hover:border-accent transition-colors flex items-center justify-center" aria-label="Back to top">
+          <i data-lucide="arrow-up" class="w-4 h-4"></i>
+        </button>
       </div>
     </div>
   </footer>

@@ -66,22 +66,41 @@ function updateAuthUI() {
   const adminBtn = document.getElementById('adminPanelNavBtn');
   const myOrdersBtn = document.getElementById('myOrdersBtn');
 
+  // Mobile elements
+  const mobileAuth = document.getElementById('mobileAuthButtons');
+  const mobileUser = document.getElementById('mobileUserInfo');
+  const mobileName = document.getElementById('mobileUserName');
+  const mobileAdminBtn = document.getElementById('mobileAdminPanelBtn');
+  const mobileMyOrdersBtn = document.getElementById('mobileMyOrdersBtn');
+
   if (userStore.token && userStore.user) {
     authNav?.classList.add('hidden');
     userNav?.classList.remove('hidden');
     myOrdersBtn?.classList.remove('hidden');
     if (navName) navName.textContent = `Hi, ${userStore.user.name.split(' ')[0]}`;
 
+    mobileAuth?.classList.add('hidden');
+    mobileUser?.classList.remove('hidden');
+    mobileMyOrdersBtn?.classList.remove('hidden');
+    if (mobileName) mobileName.textContent = `Hi, ${userStore.user.name.split(' ')[0]}`;
+
     if (userStore.user.role === 'admin') {
       adminBtn?.classList.remove('hidden');
+      mobileAdminBtn?.classList.remove('hidden');
     } else {
       adminBtn?.classList.add('hidden');
+      mobileAdminBtn?.classList.add('hidden');
     }
   } else {
     authNav?.classList.remove('hidden');
     userNav?.classList.add('hidden');
     myOrdersBtn?.classList.add('hidden');
     adminBtn?.classList.add('hidden');
+
+    mobileAuth?.classList.remove('hidden');
+    mobileUser?.classList.add('hidden');
+    mobileMyOrdersBtn?.classList.add('hidden');
+    mobileAdminBtn?.classList.add('hidden');
   }
 }
 
@@ -848,19 +867,24 @@ function initGSAPAnimations() {
 
   // Hero Headline Character Reveal Animation
   const headline = document.getElementById('heroHeadline');
+  const ctaBtn = document.getElementById('heroCustomBuilderCta') || document.getElementById('heroCta');
   if (headline) {
     const chars = splitText(headline);
     gsap.set('#heroTag', { opacity: 0, y: 20 });
     gsap.set('#heroSub', { opacity: 0, y: 20 });
-    gsap.set('#heroCta', { opacity: 0, y: 30 });
+    if (ctaBtn) gsap.set(ctaBtn, { opacity: 0, y: 30 });
     gsap.set('#scrollIndicator', { opacity: 0 });
 
     const tl = gsap.timeline({ delay: 0.2 });
     tl.to('#heroTag', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
       .from(chars, { opacity: 0, y: 80, rotateX: -90, duration: 0.8, stagger: 0.02, ease: 'power3.out' }, '-=0.4')
-      .to('#heroSub', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
-      .from('#heroCta', { opacity: 0, y: 30, duration: 0.7, ease: 'power3.out' }, '-=0.4')
-      .from('#heroPizzaWrap', { opacity: 0, scale: 0.7, rotation: -15, duration: 1.2, ease: 'power3.out' }, '-=0.8')
+      .to('#heroSub', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3');
+    
+    if (ctaBtn) {
+      tl.to(ctaBtn, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4');
+    }
+    
+    tl.from('#heroPizzaWrap', { opacity: 0, scale: 0.7, rotation: -15, duration: 1.2, ease: 'power3.out' }, '-=0.8')
       .to('#scrollIndicator', { opacity: 1, duration: 0.6 }, '-=0.2');
   }
 
@@ -941,6 +965,24 @@ function closeCart() {
   document.getElementById('cartDrawer')?.classList.remove('open');
 }
 
+function toggleMobileMenu(forceClose = false) {
+  const drawer = document.getElementById('mobileMenuDrawer');
+  const icon = document.getElementById('mobileMenuIcon');
+  if (!drawer) return;
+
+  const isOpen = drawer.classList.contains('open');
+  if (forceClose || isOpen) {
+    drawer.classList.remove('open');
+    drawer.classList.add('opacity-0', 'pointer-events-none');
+    if (icon) icon.setAttribute('data-lucide', 'menu');
+  } else {
+    drawer.classList.add('open');
+    drawer.classList.remove('opacity-0', 'pointer-events-none');
+    if (icon) icon.setAttribute('data-lucide', 'x');
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
 function showToast(msg) {
   const c = document.getElementById('toastContainer');
   if (!c) return;
@@ -984,11 +1026,22 @@ function init() {
     btn.addEventListener('click', closeAllModals);
   });
 
+  // Mobile Menu Toggle Handler
+  document.getElementById('mobileMenuToggleBtn')?.addEventListener('click', () => toggleMobileMenu());
+
   // Nav links smooth scroll
   document.querySelectorAll('.nav-link').forEach(a => {
     a.addEventListener('click', function(e) {
       const href = this.getAttribute('href');
       if (href && href !== '#') { e.preventDefault(); scrollToElement(href); }
+    });
+  });
+
+  document.querySelectorAll('.mobile-nav-link').forEach(a => {
+    a.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      if (href && href !== '#') { e.preventDefault(); scrollToElement(href); }
+      toggleMobileMenu(true);
     });
   });
 
@@ -1005,8 +1058,49 @@ function init() {
   };
 
   document.getElementById('openBuilderBtn')?.addEventListener('click', triggerBuilder);
+  document.getElementById('mobileOpenBuilderBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    triggerBuilder();
+  });
   document.getElementById('heroCustomBuilderCta')?.addEventListener('click', triggerBuilder);
   document.getElementById('footerBuilderBtn')?.addEventListener('click', triggerBuilder);
+
+  // Mobile Menu Triggers
+  document.getElementById('mobileMyOrdersBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    loadUserOrders();
+    openModal('ordersModal');
+  });
+
+  document.getElementById('mobileAdminPanelBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    loadAdminInventory();
+    loadAdminOrders();
+    openModal('adminModal');
+  });
+
+  document.getElementById('mobileLoginBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    document.getElementById('authModalTitle').textContent = 'Welcome Back';
+    document.getElementById('loginForm')?.classList.remove('hidden');
+    document.getElementById('registerForm')?.classList.add('hidden');
+    document.getElementById('forgotForm')?.classList.add('hidden');
+    openModal('authModal');
+  });
+
+  document.getElementById('mobileRegisterBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    document.getElementById('authModalTitle').textContent = 'Create Account';
+    document.getElementById('loginForm')?.classList.add('hidden');
+    document.getElementById('registerForm')?.classList.remove('hidden');
+    document.getElementById('forgotForm')?.classList.add('hidden');
+    openModal('authModal');
+  });
+
+  document.getElementById('mobileLogoutBtn')?.addEventListener('click', () => {
+    toggleMobileMenu(true);
+    userStore.logout();
+  });
 
   // Builder Option Selection Delegation
   document.getElementById('builderStepContainer')?.addEventListener('click', (e) => {
