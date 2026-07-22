@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+      return res.status(400).json({ success: false, message: 'User already exists with this email address. Redirecting to Log In...' });
     }
 
     // Create email verification token

@@ -1106,6 +1106,12 @@ function init() {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in...';
+    }
 
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -1116,6 +1122,7 @@ function init() {
       const data = await res.json();
       if (data.success) {
         userStore.setAuth(data.token, data.user);
+        e.target.reset();
         closeAllModals();
         showToast(`Welcome back, ${data.user.name}!`);
       } else {
@@ -1123,6 +1130,11 @@ function init() {
       }
     } catch (err) {
       showToast('Login error: ' + err.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log In';
+      }
     }
   });
 
@@ -1133,6 +1145,12 @@ function init() {
     const email = document.getElementById('regEmail').value;
     const password = document.getElementById('regPassword').value;
     const role = document.getElementById('regRole').value;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating Account...';
+    }
 
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
@@ -1143,13 +1161,28 @@ function init() {
       const data = await res.json();
       if (data.success) {
         userStore.setAuth(data.token, data.user);
+        e.target.reset();
         closeAllModals();
         showToast(data.message || 'Registration successful!');
       } else {
         showToast(data.message || 'Registration failed');
+        // If user already exists, switch to login modal prefilled
+        if (data.message && data.message.includes('already exists')) {
+          setTimeout(() => {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('authModalTitle').textContent = 'Welcome Back';
+          }, 1200);
+        }
       }
     } catch (err) {
       showToast('Registration error: ' + err.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Account';
+      }
     }
   });
 
