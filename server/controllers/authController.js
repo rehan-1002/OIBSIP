@@ -40,19 +40,15 @@ exports.register = async (req, res) => {
       verificationTokenExpires
     });
 
-    // Send verification email
+    // Send verification email in background
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5000';
     const verifyUrl = `${clientUrl}/#verify-email?token=${verificationToken}`;
     
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Verify your FUOCO Pizza Account',
-        html: getVerificationEmailTemplate(user.name, verifyUrl)
-      });
-    } catch (err) {
-      console.error('Failed to send verification email:', err);
-    }
+    sendEmail({
+      email: user.email,
+      subject: 'Verify your FUOCO Pizza Account',
+      html: getVerificationEmailTemplate(user.name, verifyUrl)
+    }).catch(err => console.error('Failed to send verification email:', err));
 
     res.status(201).json({
       success: true,

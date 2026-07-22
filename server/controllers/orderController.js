@@ -143,25 +143,21 @@ exports.verifyPayment = async (req, res) => {
     // Auto-decrement inventory stock counts for ingredients used
     await decrementInventoryForOrder(order.items);
 
-    // Send order confirmation email
+    // Send order confirmation email asynchronously in background
     if (order.user && order.user.email) {
-      try {
-        await sendEmail({
-          email: order.user.email,
-          subject: `🍕 Order Confirmed #${order._id.toString().slice(-6).toUpperCase()} — FUOCO Pizza`,
-          html: `
-            <div style="font-family: Arial, sans-serif; background: #0D0D0D; color: #FFF; padding: 30px;">
-              <h1 style="color: #FF5E14;">FUOCO ARTISAN PIZZA</h1>
-              <h2>Order Confirmed & Paid!</h2>
-              <p>Hi ${order.user.name}, your order of $${order.totalAmount.toFixed(2)} has been received and is being prepared in our wood-fired kitchen!</p>
-              <p><strong>Order ID:</strong> ${order._id}</p>
-              <p><strong>Status:</strong> ${order.orderStatus}</p>
-            </div>
-          `
-        });
-      } catch (mailErr) {
-        console.error('Failed sending order confirmation email:', mailErr);
-      }
+      sendEmail({
+        email: order.user.email,
+        subject: `🍕 Order Confirmed #${order._id.toString().slice(-6).toUpperCase()} — FUOCO Pizza`,
+        html: `
+          <div style="font-family: Arial, sans-serif; background: #0D0D0D; color: #FFF; padding: 30px;">
+            <h1 style="color: #FF5E14;">FUOCO ARTISAN PIZZA</h1>
+            <h2>Order Confirmed & Paid!</h2>
+            <p>Hi ${order.user.name}, your order of $${order.totalAmount.toFixed(2)} has been received and is being prepared in our wood-fired kitchen!</p>
+            <p><strong>Order ID:</strong> ${order._id}</p>
+            <p><strong>Status:</strong> ${order.orderStatus}</p>
+          </div>
+        `
+      }).catch(mailErr => console.error('Background order confirmation email error:', mailErr));
     }
 
     // Emit Socket.io event if socket server is attached
