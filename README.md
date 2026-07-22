@@ -6,6 +6,9 @@
   <strong>A Full-Stack MERN (Node.js, Express, MongoDB, JavaScript) Wood-Fired Neapolitan Pizza Ordering Engine featuring an Interactive 4-Step Custom Builder, Razorpay Payment Gateway, Live WebSockets, Admin Dashboard, and Automated Low-Stock Cron Alerts.</strong>
 </p>
 
+<h3>🌐 <a href="https://fuoco-pizza.onrender.com">Live Demo: fuoco-pizza.onrender.com</a></h3>
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-fuoco--pizza.onrender.com-FF5E14?style=for-the-badge&logo=render)](https://fuoco-pizza.onrender.com)
 [![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express.js-4.x-black?style=for-the-badge&logo=express)](https://expressjs.com)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://mongodb.com)
