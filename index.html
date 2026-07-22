@@ -84,7 +84,7 @@
     .hero-pizza-glow { position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(255,94,20,0.15), transparent 60%); animation: pulseGlow 4s ease-in-out infinite; z-index: -1; }
     @keyframes pulseGlow { 0%,100%{opacity:0.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
 
-    .char-reveal { display: inline-block; opacity: 0; transform: translateY(80px) rotateX(-90deg); transform-origin: bottom center; }
+    .char-reveal { display: inline-block; opacity: 1; }
 
     .hero-particle { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0; animation: particleFloat var(--dur) var(--delay) ease-in-out infinite; }
     @keyframes particleFloat { 0%{opacity:0;transform:translateY(0) scale(0)} 15%{opacity:var(--op);transform:translateY(-40px) scale(1)} 85%{opacity:calc(var(--op)*0.3);transform:translateY(-350px) scale(0.4)} 100%{opacity:0;transform:translateY(-420px) scale(0)} }

@@ -865,27 +865,15 @@ function initGSAPAnimations() {
     }
   });
 
-  // Hero Headline Character Reveal Animation
+  // Hero Entrance Animations (Safe & Non-Destructive)
   const headline = document.getElementById('heroHeadline');
   const ctaBtn = document.getElementById('heroCustomBuilderCta') || document.getElementById('heroCta');
   if (headline) {
-    const chars = splitText(headline);
-    gsap.set('#heroTag', { opacity: 0, y: 20 });
-    gsap.set('#heroSub', { opacity: 0, y: 20 });
-    if (ctaBtn) gsap.set(ctaBtn, { opacity: 0, y: 30 });
-    gsap.set('#scrollIndicator', { opacity: 0 });
-
-    const tl = gsap.timeline({ delay: 0.2 });
-    tl.to('#heroTag', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
-      .from(chars, { opacity: 0, y: 80, rotateX: -90, duration: 0.8, stagger: 0.02, ease: 'power3.out' }, '-=0.4')
-      .to('#heroSub', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3');
-    
-    if (ctaBtn) {
-      tl.to(ctaBtn, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4');
-    }
-    
-    tl.from('#heroPizzaWrap', { opacity: 0, scale: 0.7, rotation: -15, duration: 1.2, ease: 'power3.out' }, '-=0.8')
-      .to('#scrollIndicator', { opacity: 1, duration: 0.6 }, '-=0.2');
+    gsap.from('#heroTag', { opacity: 0, y: 20, duration: 0.8, ease: 'power3.out' });
+    gsap.from('#heroHeadline', { opacity: 0, y: 30, duration: 0.8, delay: 0.15, ease: 'power3.out' });
+    gsap.from('#heroSub', { opacity: 0, y: 20, duration: 0.8, delay: 0.3, ease: 'power3.out' });
+    if (ctaBtn) gsap.from(ctaBtn, { opacity: 0, y: 25, duration: 0.8, delay: 0.4, ease: 'power3.out' });
+    gsap.from('#heroPizzaWrap', { opacity: 0, scale: 0.8, duration: 1.0, delay: 0.2, ease: 'power3.out' });
   }
 
   // Hero Parallax Background & Rotating Pizza
