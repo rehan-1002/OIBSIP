@@ -69,6 +69,24 @@ Craft your dream Neapolitan pizza step-by-step with real-time stock validation a
 | **Email & Cron** | Nodemailer (`nodemailer`), `node-cron` |
 
 ---
+### 📸 System & Application Screenshots
+
+#### 🍕 Landing Page & Pizza Builder
+![Landing Page & Custom Builder](./Screenshot%202026-07-22%20182532.png)
+
+#### 💳 Razorpay Payment Checkout
+![Razorpay Test Payment](./Screenshot%202026-07-22%20184056.png)
+
+#### 🚚 Admin Dashboard & Live Order Updates
+![Admin Order Status Stepper](./Screenshot%202026-07-22%20184203.png)
+
+#### 🗄️ MongoDB Atlas Database
+![MongoDB Atlas Collections](./Screenshot%202026-07-22%20184435.png)
+
+#### 📧 Automated Email Notifications (Nodemailer)
+![Order Confirmation Email](./Screenshot%202026-07-22%20184908.png)
+
+---
 
 ## 📁 Repository Directory Architecture
 
